@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="lv">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>KINO NOX Lite</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="imagery.css">
+</head>
+<body>
+  <header class="topbar">
+    <button class="brand" data-action="home" aria-label="KINO NOX sākumlapa">KINO <i>NOX</i><small>Lite · 0.1.1</small></button>
+    <nav aria-label="Galvenā navigācija">
+      <button data-nav="catalog">Filmas</button>
+      <button data-nav="profile">Mans profils</button>
+      <button data-nav="admin">Operatora panelis</button>
+    </nav>
+    <div class="top-actions">
+      <button class="icon-button" data-nav="cart" aria-label="Grozs">Grozs <span id="cart-count">0</span></button>
+      <button class="subtle" data-action="reset">Atiestatīt datus</button>
+    </div>
+  </header>
+
+  <main id="app" tabindex="-1"></main>
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <template id="seat-template"><button class="seat" type="button"></button></template>
+  <script src="app.js"></script>
+</body>
+</html>
