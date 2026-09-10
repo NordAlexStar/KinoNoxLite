@@ -4,13 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
+  <meta name="description" content="KINO NOX Lite — mācību kinoteātra biļešu sistēma prasību analīzei un manuālajai testēšanai.">
   <title>KINO NOX Lite</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2311131a'/%3E%3Cpath d='M8 10h4v12H8zM20 10h4v12h-4z' fill='%23ff8d32'/%3E%3Cpath d='M13 13l7 3-7 3z' fill='%23f4f1eb'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="imagery.css">
 </head>
 <body>
+  <a class="skip-link" href="#app">Pāriet uz saturu</a>
   <header class="topbar">
-    <button class="brand" data-action="home" aria-label="KINO NOX sākumlapa">KINO <i>NOX</i><small>Lite · 0.2.0</small></button>
+    <button class="brand" data-action="home" aria-label="KINO NOX sākumlapa">KINO <i>NOX</i><small>Lite · <span data-version>0.2.1</span></small></button>
     <nav aria-label="Galvenā navigācija">
       <button data-nav="catalog">Filmas</button>
       <button data-nav="profile">Mans profils</button>
@@ -23,9 +26,21 @@
   </header>
 
   <main id="app" tabindex="-1"></main>
-  <div id="toast" role="status" aria-live="polite"></div>
 
-  <template id="seat-template"><button class="seat" type="button"></button></template>
+  <footer class="site-footer">
+    <div>
+      <strong>KINO NOX Lite</strong> · <span data-version>0.2.1</span> · mācību vide
+      <br><span class="meta">PB7 «Programmu testēšana» · dati paliek šajā pārlūkā · © <span data-year>2026</span> KINO NOX</span>
+    </div>
+    <div class="footer-links">
+      <button class="subtle" data-nav="catalog">Filmas</button>
+      <button class="subtle" data-nav="profile">Profils</button>
+      <button class="subtle" data-nav="admin">Operators</button>
+      <button class="subtle" data-action="reset">Atiestatīt datus</button>
+    </div>
+  </footer>
+
+  <div id="toast" role="status" aria-live="polite"></div>
   <script src="app.js"></script>
 </body>
 </html>
