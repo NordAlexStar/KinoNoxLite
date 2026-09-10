@@ -41,8 +41,12 @@ let holdTimer = null;
 
 const app = document.querySelector('#app');
 function clone(x){return JSON.parse(JSON.stringify(x))}
-function load(){try{return {...clone(seed),...JSON.parse(localStorage.getItem(KEY))}}catch{return clone(seed)}}
-function save(){localStorage.setItem(KEY,JSON.stringify(state));updateCart()}
+const store={mem:{},ok:(()=>{try{localStorage.setItem('__probe','1');localStorage.removeItem('__probe');return true}catch{return false}})()};
+function lsGet(k){try{return store.ok?localStorage.getItem(k):(k in store.mem?store.mem[k]:null)}catch{return k in store.mem?store.mem[k]:null}}
+function lsSet(k,v){try{if(store.ok)localStorage.setItem(k,v);else store.mem[k]=v}catch{store.mem[k]=v}}
+function lsDel(k){try{if(store.ok)localStorage.removeItem(k);else delete store.mem[k]}catch{delete store.mem[k]}}
+function load(){try{return {...clone(seed),...JSON.parse(lsGet(KEY))}}catch{return clone(seed)}}
+function save(){lsSet(KEY,JSON.stringify(state));updateCart()}
 function money(n){return new Intl.NumberFormat('lv-LV',{style:'currency',currency:'EUR'}).format(n)}
 function nowLabel(){return new Intl.DateTimeFormat('lv-LV',{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'}).format(new Date())}
 function dateLabel(iso){
@@ -84,6 +88,7 @@ function catalog(){
   if(view.todayOnly) items=items.filter(m=>state.screenings.some(s=>s.movieId===m.id&&s.date===today));
   items=[...items].sort((a,b)=>a.title.localeCompare(b.title,'lv'));
   return `<section><div class="catalog-hero"><div><p class="eyebrow">${nowLabel()}</p><h1 class="page-title">Atrodi savu nākamo seansu.</h1><p class="lede">KINO NOX Lite ir lokāla mācību sistēma. Dati paliek šajā pārlūkā.</p></div></div>
+  ${store.ok?'':'<div class="notice error">Šis pārlūks neļauj saglabāt datus (localStorage) — izmaiņas paliks tikai līdz lapas aizvēršanai. Ieteicams atvērt failu lokāli vai izmantot citu pārlūku.</div>'}
   <div class="utility-row"><div class="filters">${genres.map(g=>`<button class="${g===view.filter?'active':''}" data-filter="${g}">${g}</button>`).join('')}<button class="${view.todayOnly?'active':''}" data-action="today">Šodien</button></div><span class="meta">${items.length} filmas · kārtotas alfabētiski</span></div>
   ${items.length?`<div class="movie-grid">${items.map(m=>`<article class="movie" data-movie="${m.id}"><div class="poster" style="--poster:${m.accent}">${titleArt(m).replace(/\n/g,'<br>')}</div><h2>${m.title}</h2><div class="meta">${m.genre} · ${m.year} · ${m.duration} min · ${m.age}</div><div class="meta">★ ${m.rating.toFixed(1)}</div><div class="price">No ${money(m.price)}</div><div class="card-cta">Skatīt seansus →</div></article>`).join('')}</div>`:'<div class="empty-state">Neviena filma neatbilst izvēlētajam filtram.<div class="form-actions" style="justify-content:center"><button class="button secondary" data-filter="Visi">Rādīt visas filmas</button></div></div>'}</section>`
 }
@@ -358,7 +363,7 @@ document.addEventListener('click',e=>{
   if(b.dataset.action==='reset'){
     const keepProfile=state.profile;
     state=clone(seed);state.profile=keepProfile;
-    localStorage.removeItem(KEY);save();
+    lsDel(KEY);save();
     view={screen:'catalog',movieId:null,screeningId:null,seats:[],typeId:'pieauguso',cart:null,filter:'Visi',todayOnly:false,order:null,notice:null,holdEnd:null,passwordView:null};
     audit('Atiestatīti dati','Sākuma stāvoklis');
     toast('Mācību dati ir atiestatīti.');return render();

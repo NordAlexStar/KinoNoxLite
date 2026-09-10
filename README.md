@@ -18,6 +18,14 @@ Statiskā PB7 mācību lietotne. Atveriet `index.html` pārlūkā: nav vajadzīg
 - dati tiek glabāti konkrētā pārlūka `localStorage` glabātuvē;
 - poga **Atiestatīt datus** atgriež sākuma stāvokli.
 
+## Kā atvērt
+
+**Vienkāršākais ceļš (ieteicams studentiem):** lejupielādēt **vienu failu** `standalone/KinoNoxLite.html` un atvērt to ar dubultklikšķi. Tajā jau ir iekšā visa lapa, stili, skripti un attēli — nav vajadzīga neviena papildu mape, serveris vai internets.
+
+**Pilnā versija:** lejupielādēt visu repozitoriju (Code → Download ZIP), atarhivēt un atvērt `index.html`. Šajā versijā attēli tiek ņemti no mapes `assets/`, tāpēc failam jāatrodas blakus `styles.css`, `imagery.css`, `app.js` un `assets/` — citādi lapa paliks bez noformējuma.
+
+Pārbaudīts: ja pārlūks aizliedz `localStorage` (piemēram, stingros drošības režīmos), lietotne turpina darboties un parāda paziņojumu, ka dati netiks saglabāti.
+
 ## Operatora piekļuve (mācību vide)
 
 Operatora parole: `op2026`
