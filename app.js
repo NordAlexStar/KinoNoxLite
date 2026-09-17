@@ -1,5 +1,5 @@
 const KEY = 'kino-nox-lite-v1';
-const VERSION = '0.6.0';
+const VERSION = '0.6.1';
 const VAT = 0.21;
 const MAX_SEATS = 8;
 const OPERATOR_PASSWORD = 'op2026';
@@ -397,7 +397,7 @@ function booking(){
   <p class="eyebrow">${m.title} · ${s.time} · ${s.hall} · ${dateLabel(s.date)}</p><h1 class="page-title">Izvēlies vietas.</h1>
   <p class="meta">Rezervācija spēkā: <span class="timer" id="hold">${view.holdEnd?holdLabel(view.holdEnd-Date.now()):'10:00'}</span> · vienā pirkumā līdz ${MAX_SEATS} vietām</p>
   <div class="screen">EKRĀNS</div><div class="seat-map">${seatRows}</div>
-  <div class="legend"><span><i></i>Brīva</span><span><i class="taken"></i>Aizņemta</span><span><i class="selected"></i>Izvēlēta</span><span><i class="wheel"></i>Invalīdu vieta</span></div></div>
+  <div class="legend"><span><i></i>Brīva</span><span><i class="taken"></i>Aizņemta</span><span><i class="selected"></i>Izvēlēta</span><span><i class="wheel"></i>Invalīdu vieta${inv.length?`: ${inv.join(', ')}`:' šajā zālē nav'}</span></div></div>
   <aside class="panel"><h2>Pasūtījums</h2>
   <div class="summary-row"><span>Seanss</span><strong>${s.time}</strong></div>
   <div class="summary-row"><span>Datums</span><strong>${dateLabel(s.date)}</strong></div>
