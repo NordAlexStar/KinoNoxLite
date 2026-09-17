@@ -1,5 +1,5 @@
 const KEY = 'kino-nox-lite-v1';
-const VERSION = '0.6.1';
+const VERSION = '0.6.2';
 const VAT = 0.21;
 const MAX_SEATS = 8;
 const OPERATOR_PASSWORD = 'op2026';
@@ -265,13 +265,25 @@ function nav(screen){stopHold();if(location.hash){try{history.replaceState(null,
 function stopHold(){if(holdTimer){clearInterval(holdTimer);holdTimer=null}}
 function holdLabel(ms){const s=Math.max(0,Math.floor(ms/1000));return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`}
 function startHold(){
+  /* BUG-17 (US-05.02): rezervācijas laiks darbojas arī grozā un maksājuma lapā, ne tikai vietu izvēlē. */
+  if(view.screen==='cart'&&!view.cart){stopHold();return}
   if(!view.holdEnd) view.holdEnd=Date.now()+10*60*1000;
   stopHold();
   holdTimer=setInterval(()=>{
     const left=view.holdEnd-Date.now();
     const el=document.querySelector('#hold');
     if(el) el.textContent=holdLabel(left);
-    if(left<=0){stopHold();view.seats=[];view.holdEnd=null;view.notice='Rezervācijas laiks beidzās — vietas atbrīvotas citiem pircējiem.';render()}
+    if(left<=0){
+      stopHold();view.holdEnd=null;
+      if(view.screen==='cart'){
+        view.cart=null;view.seats=[];view.paying=false;
+        view.notice='Rezervācijas laiks beidzās — pasūtījums anulēts, izvēlētās vietas atbrīvotas citiem pircējiem.';
+      }else{
+        view.seats=[];
+        view.notice='Rezervācijas laiks beidzās — vietas atbrīvotas citiem pircējiem.';
+      }
+      render();
+    }
   },1000);
 }
 
@@ -452,7 +464,7 @@ function conflictText(scr,c){
 /* ---------- Grozs ---------- */
 function cart(){
   const c=view.cart;
-  if(!c) return `<section><p class="eyebrow">Grozs</p><h1 class="page-title">Grozs ir tukšs.</h1><p class="lede">Izvēlieties filmu, seansu un vietas.</p><button class="button" data-nav="catalog">Skatīt filmas</button></section>`;
+  if(!c) return `<section><p class="eyebrow">Grozs</p><h1 class="page-title">Grozs ir tukšs.</h1><p class="lede">Izvēlieties filmu, seansu un vietas.</p>${view.notice?notice(view.notice,'error'):''}<button class="button" data-nav="catalog">Skatīt filmas</button></section>`;
   const m=movie(c.movieId),s=screening(c.screeningId),t=typeOf(c.typeId);
   const promo=(c.promo||'').toUpperCase();
   const subtotal=Math.round(c.unit*c.seats.length*100)/100;
@@ -470,6 +482,7 @@ function cart(){
   const promoType=c.promoNotice||!(res&&res.ok)?'error':'success';
   return `<section>${steps('cart')}<div class="booking-layout"><div><p class="eyebrow">Pirkuma apstiprināšana</p><h1 class="page-title">${m.title}</h1>
   <p class="lede">${dateLabel(s.date)} · ${s.time} · ${s.hall} · vietas ${c.seats.join(', ')}</p>
+  <p class="meta">Rezervācija spēkā: <span class="timer" id="hold">${view.holdEnd?holdLabel(view.holdEnd-Date.now()):'10:00'}</span> — kad laiks beidzas, pasūtījums tiek anulēts un vietas atbrīvotas.</p>
   <div class="panel"><h2>Biļetes veids</h2><p class="meta">${t.label} · ${money(c.unit)} par vietu · ${c.seats.length} biļete(s)</p></div>
   <div class="panel"><h2>Atlaides kods</h2><div class="form-actions"><input id="promo" value="${c.promo||''}" placeholder="Piemēram, BLEGH"><button class="button secondary" data-action="promo">Piemērot</button></div>
   ${promoText?notice(promoText,promoType):''}</div>
@@ -639,7 +652,7 @@ function render(){
   if(view.trailer) html+=trailerModal();
   app.innerHTML=html;updateCart();
   if(lastScreen!==view.screen){window.scrollTo({top:0,behavior:'smooth'});lastScreen=view.screen}
-  if(view.screen==='booking') startHold(); else stopHold();
+  if(view.screen==='booking'||view.screen==='cart') startHold(); else stopHold();
 }
 
 function addCart(){
@@ -672,6 +685,12 @@ function readPayment(){
 /* US-08.01: maksājums tiek apstrādāts nekavējoties — viens solis, uzreiz zināms iznākums. */
 function checkout(){
   if(view.paying) return;                    // US-08.03: atkārtots klikšķis nerada otru pasūtījumu
+  /* BUG-17 (US-05.02): ja rezervācijas laiks ir beidzies, pirkums netiek pieņemts. */
+  if(view.holdEnd&&view.holdEnd-Date.now()<=0){
+    stopHold();view.holdEnd=null;view.cart=null;view.seats=[];
+    view.notice='Rezervācijas laiks ir beidzies — pasūtījums anulēts. Lūdzu, izvēlieties vietas no jauna.';
+    return render();
+  }
   const email=document.querySelector('#order-email').value.trim();
   if(!/^\S+@\S+\.\S+$/.test(email)){view.paymentError='Ievadiet derīgu e-pasta adresi.';render();return}
   const card=readPayment();
