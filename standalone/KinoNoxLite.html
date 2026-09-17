@@ -64,7 +64,7 @@
 <body>
   <a class="skip-link" href="#app">Pāriet uz saturu</a>
   <header class="topbar">
-    <button class="brand" data-action="home" aria-label="KINO NOX sākumlapa">KINO <i>NOX</i><small>Lite · <span data-version>0.5.0</span></small></button>
+    <button class="brand" data-action="home" aria-label="KINO NOX sākumlapa">KINO <i>NOX</i><small>Lite · <span data-version>0.6.0</span></small></button>
     <nav aria-label="Galvenā navigācija">
       <button data-nav="catalog">Filmas</button>
       <button data-nav="profile">Mans profils</button>
@@ -80,7 +80,7 @@
 
   <footer class="site-footer">
     <div>
-      <strong>KINO NOX Lite</strong> · <span data-version>0.5.0</span> · mācību vide
+      <strong>KINO NOX Lite</strong> · <span data-version>0.6.0</span> · mācību vide
       <br><span class="meta">PB7 «Programmu testēšana» · dati paliek šajā pārlūkā · © <span data-year>2026</span> KINO NOX</span>
     </div>
     <div class="footer-links">
@@ -94,7 +94,7 @@
   <div id="toast" role="status" aria-live="polite"></div>
   <script>
 const KEY = 'kino-nox-lite-v1';
-const VERSION = '0.5.0';
+const VERSION = '0.6.0';
 const VAT = 0.21;
 const MAX_SEATS = 8;
 const OPERATOR_PASSWORD = 'op2026';
@@ -516,6 +516,7 @@ function paymentPanel(total){
   return `<div class="panel"><h2>Maksājuma dati</h2>
   <p class="meta">Mācību vide: maksājumu pakalpojums tiek simulēts. Ievadiet tikai testa kartes datus (piemēram, 4242 4242 4242 4242); īstus kartes datus šeit ievadīt nedrīkst.</p>
   <div class="form-grid">
+  <label>E-pasts biļetei<input id="order-email" type="email" value="${state.profile?.email||''}" placeholder="vards@example.com"></label>
   <label>Kartes numurs<input id="card-number" inputmode="numeric" autocomplete="off" placeholder="4242 4242 4242 4242"></label>
   <label>Vārds uz kartes<input id="card-name" autocomplete="off" placeholder="VĀRDS UZVĀRDS"></label>
   <label>Derīguma termiņš (MM/GG)<input id="card-exp" inputmode="numeric" autocomplete="off" maxlength="5" placeholder="12/28"></label>
@@ -523,6 +524,24 @@ function paymentPanel(total){
   </div>
   ${view.paymentError?notice(view.paymentError,'error'):''}
   <p class="meta">Apmaksājamā summa: <strong>${money(total)}</strong></p></div>`;
+}
+
+/* BUG-11 (US-11.01): divi seansi vienā zālē nedrīkst pārklāties — ņemot vērā filmas ilgumu.
+   Atgriež konfliktējošo seansu vai null. */
+function screeningConflict(scr,ignoreId){
+  const m=movie(scr.movieId),dur=(m?m.duration:120)*60000;
+  const a=startsAt(scr).getTime(),b=a+dur;
+  return state.screenings.find(s=>{
+    if(ignoreId&&s.id===ignoreId)return false;
+    if(s.hall!==scr.hall||s.date!==scr.date)return false;
+    const sm=movie(s.movieId),sd=(sm?sm.duration:120)*60000;
+    const x=startsAt(s).getTime(),y=x+sd;
+    return a<y&&x<b;
+  })||null;
+}
+function conflictText(scr,c){
+  const cm=movie(c.movieId);
+  return `Zālē «${scr.hall}» ${dateLabel(scr.date)} plkst. ${scr.time} jau notiek filma «${cm?cm.title:'?'}» (${c.time}). Divi seansi vienā zālē nevar pārklāties.`;
 }
 
 /* ---------- Grozs ---------- */
@@ -557,7 +576,7 @@ function cart(){
   ${off?`<div class="summary-row"><span>Atlaide ${res.label}</span><strong>−${money(off)}</strong></div>`:''}
   <div class="summary-row"><span>t. sk. PVN ${Math.round(VAT*100)}%</span><strong>${money(vat)}</strong></div>
   <div class="summary-row total"><span>Kopā</span><span>${money(total)}</span></div>
-  <div class="form-grid"><label>E-pasts biļetei<input id="order-email" type="email" value="${state.profile?.email||''}" placeholder="vards@example.com"></label></div>
+  <p class="meta">Biļetes e-pasts tiek ievadīts maksājuma blokā (laukā «E-pasts biļetei»).</p>
   <div class="form-actions"><button class="button" data-action="checkout" ${view.paying?'disabled':''}>${view.paying?'Maksājums tiek apstrādāts…':'Apstiprināt pirkumu'}</button></div>
   ${view.notice?notice(view.notice):''}</aside></div></section>`
 }
@@ -794,7 +813,13 @@ document.addEventListener('click',e=>{
   if(b.dataset.seat){
     const n=b.dataset.seat;
     if(view.seats.includes(n)){view.seats=view.seats.filter(x=>x!==n);view.notice=null;return render()}
-    if(view.seats.length>=MAX_SEATS+1){toast(`Vienā pirkumā var iegādāties ne vairāk kā ${MAX_SEATS} vietas.`);return}
+    /* BUG-16 (US-05.05): vienā pirkumā ne vairāk kā MAX_SEATS vietas. Robeža tiek pārbaudīta
+       pirms pievienošanas, un lietotājs saņem paziņojumu lapā, nevis klusu atteikumu. */
+    if(view.seats.length>=MAX_SEATS){
+      view.notice=`Vienā pirkumā var iegādāties ne vairāk kā ${MAX_SEATS} vietas.`;
+      return render();
+    }
+    view.notice=null;
     view.seats=[...view.seats,n];return render();
   }
   if(b.dataset.action==='add-cart')return addCart();
@@ -916,6 +941,10 @@ document.addEventListener('click',e=>{
           hall=document.querySelector('#sc-hall').value,
           price=Number(document.querySelector('#sc-price').value);
     if(!date||!time||!movieId||!price){view.notice='Norādiet filmu, datumu, laiku un cenu.';return render()}
+    /* BUG-11: viena zāle vienā laikā — pārbaude arī labošanā (izņemot pašu seansu). */
+    const candidate={movieId,date,time,hall},
+          clash=screeningConflict(candidate,b.dataset.action==='save-screening'?view.editingScreening:null);
+    if(clash){view.notice=conflictText(candidate,clash);return render()}
     if(b.dataset.action==='save-screening'){
       const s=screening(view.editingScreening);
       Object.assign(s,{movieId,date,time,hall,price});
@@ -951,7 +980,12 @@ document.addEventListener('click',e=>{
           untilInput=document.querySelector('#promo-until'),
           until=untilInput?untilInput.value:'';
     if(!code||!val){view.notice='Norādiet koda nosaukumu un atlaidi.';return render()}
-    /* Mīna Nr.7 paliek apzināti: maksimālā atlaide (50 %) netiek pārbaudīta. */
+    /* BUG-12 / BUG-13 (US-07.03): maksimālā atlaide ir 50 % — lielāku kodu sistēma nepieņem. */
+    if(kind==='percent'&&(val<1||val>50)){
+      view.notice=`Procentu atlaide var būt no 1 līdz 50 %. Kods «${code}» netika pievienots.`;
+      return render();
+    }
+    if(kind==='eur'&&val<0){view.notice='Fiksētā atlaide nevar būt negatīva.';return render()}
     state.promos[code]={kind,value:val,min,until};
     audit('Pievienots atlaides kods',`${code} · ${kind==='eur'?`−${money(val)}`:`−${val}%`}${min?` · no ${money(min)}`:''}${until?` · termiņš ${until}`:''}`);
     save();view.notice='Atlaides kods pievienots.';return render();
