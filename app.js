@@ -93,7 +93,11 @@ const seed = {
     {id:1,title:'Neona pilsēta',genre:'Trilleris',year:2026,duration:118,age:'16+',language:'Angļu',subtitles:'Latviešu',director:'Māra Ozola',actors:'I. Kalniņš, A. Bērziņa',rating:8.1,trailer:true,price:8.5,accent:"url('assets/poster-neona-pilseta.png')",description:'Pēc nakts lietus Rīga iemirdzas neona krāsās. Detektīve Mara atrod pavedienu, kas ved pāri pilsētai un pašai sev pāri.'},
     {id:2,title:'Mēness arhīvs',genre:'Zinātniskā fantastika',year:2026,duration:132,age:'12+',language:'Angļu',subtitles:'Latviešu',director:'Jānis Vītols',actors:'K. Ozoliņa, R. Lapsa',rating:7.6,trailer:true,price:9,accent:"url('assets/poster-meness-arhivs.png')",description:'Uz pamestas Mēness stacijas atstāta balss ieraksta atklāj stāstu, kuru neviens nebija paredzējis dzirdēt.'},
     {id:3,title:'Vasaras otra puse',genre:'Drāma',year:2025,duration:104,age:'7+',language:'Latviešu',subtitles:'Angļu',director:'Līga Bērza',actors:'A. Ozols, M. Kūla',rating:7.9,trailer:false,price:7.5,accent:"url('assets/poster-vasaras-otra-puse.png')",description:'Draudzība, kas sākas vienā vasarā, iemāca pieaugt daudz ātrāk nekā gribētos.'},
-    {id:4,title:'Savvaļas signāls',genre:'Piedzīvojumu',year:2025,duration:96,age:'7+',language:'Latviešu',subtitles:'Nav',director:'Pēteris Kalns',actors:'E. Sproģe, T. Vīksna',rating:6.8,trailer:false,price:7.5,accent:"url('assets/poster-savvalas-signals.png')",description:'Jauna biologu komanda seko noslēpumainam radiosignālam dziļi mežā.'}
+    {id:4,title:'Savvaļas signāls',genre:'Piedzīvojumu',year:2025,duration:96,age:'7+',language:'Latviešu',subtitles:'Nav',director:'Pēteris Kalns',actors:'E. Sproģe, T. Vīksna',rating:6.8,trailer:false,price:7.5,accent:"url('assets/poster-savvalas-signals.png')",description:'Jauna biologu komanda seko noslēpumainam radiosignālam dziļi mežā.'},
+    /* Papildināts pēc klases defektiem BUG-05/06/07 (17.09.2026): sadaļā «Zinātniskā fantastika» bija tikai
+       viena filma, tāpēc alfabētisko kārtību tur nevarēja pārbaudīt, un neviena filma nesākās ar «A» —
+       «pirmā filma sarakstā» arī nebija pārbaudāma. Šī filma aizpilda abas robus. */
+    {id:5,title:'Atgriešanās orbītā',genre:'Zinātniskā fantastika',year:2026,duration:126,age:'12+',language:'Angļu',subtitles:'Latviešu',director:'Ilze Muižniece',actors:'D. Osis, L. Caune',rating:7.4,trailer:false,price:9.5,accent:"url('assets/poster-atgriesanas-orbita.png')",description:'Mājas stacija klusē jau deviņus gadus. Kad atgriežas pēdējā ekspedīcija, apkalpe atklāj, ka laiks orbītā un uz Zemes rit dažādi.'}
   ],
   screenings: [
     {id:1,movieId:1,date:isoDate(0),time:'18:30',hall:'Zāle 1',price:8.5},
@@ -102,10 +106,14 @@ const seed = {
     {id:4,movieId:2,date:isoDate(1),time:'22:00',hall:'Zāle 1',price:10},
     {id:5,movieId:3,date:isoDate(1),time:'17:45',hall:'Zāle 2',price:7.5},
     {id:6,movieId:4,date:isoDate(2),time:'16:20',hall:'Zāle 1',price:7.5},
-    {id:7,movieId:3,date:isoDate(0),time:'15:00',hall:'Zāle 3',price:7.5}
+    {id:7,movieId:3,date:isoDate(0),time:'15:00',hall:'Zāle 3',price:7.5},
+    /* BUG-08: границы суток. Ни одного сеанса 00:00 или 23:59 в данных не было, поэтому проверку
+       «фильм виден в Šodien на границе дня» нельзя было выполнить вовсе. Теперь оба края есть. */
+    {id:8,movieId:5,date:isoDate(0),time:'00:00',hall:'Zāle 1',price:9.5},
+    {id:9,movieId:5,date:isoDate(0),time:'23:59',hall:'Zāle 2',price:9.5}
   ],
   halls:{'Zāle 1':{rows:6,seats:10},'Zāle 2':{rows:5,seats:8},'Zāle 3':{rows:7,seats:12}},
-  reserved:{1:['A2','C7'],2:['B4'],3:['A1','A2','D5'],4:['C3'],5:['B6'],6:['E8'],7:[]},
+  reserved:{1:['A2','C7'],2:['B4'],3:['A1','A2','D5'],4:['C3'],5:['B6'],6:['E8'],7:[],8:[],9:[]},
   ticketTypes:[
     {id:'pieauguso',label:'Pieaugušo',k:1},
     {id:'skolena',label:'Skolēna',k:0.7},

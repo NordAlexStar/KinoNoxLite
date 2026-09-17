@@ -7,6 +7,7 @@ Rezultāts:  standalone/KinoNoxLite.html
 Prasības: Python 3 un Pillow (attēlu saspiešanai).
 """
 import base64
+import glob
 import io
 import os
 
@@ -35,12 +36,12 @@ def main():
     hero, hero_size = webp_data_uri(os.path.join(ROOT, "assets", "cinema-hero.png"), 1280, 70)
     css = css.replace("url('assets/cinema-hero.png')", f"url('{hero}')")
 
-    posters = [
-        "poster-neona-pilseta",
-        "poster-meness-arhivs",
-        "poster-vasaras-otra-puse",
-        "poster-savvalas-signals",
-    ]
+    # Список постеров больше не захардкожен: новый фильм с новым постером ломал сборку
+    # («осталась ссылка на assets/»), потому что имя надо было вписать ещё и сюда.
+    posters = sorted(
+        os.path.splitext(os.path.basename(p))[0]
+        for p in glob.glob(os.path.join(ROOT, "assets", "poster-*.png"))
+    )
     total = hero_size
     for name in posters:
         uri, size = webp_data_uri(os.path.join(ROOT, "assets", name + ".png"), 640, 72)
