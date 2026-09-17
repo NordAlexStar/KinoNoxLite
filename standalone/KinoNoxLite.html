@@ -205,7 +205,6 @@ const seed = {
   users:[],orders:[],promos:{BLEGH:10,SKOLA25:25},audit:[],profile:null,operator:false
 };
 
-let state = load();
 let view = {screen:'catalog',movieId:null,screeningId:null,seats:[],typeId:'pieauguso',cart:null,filter:'Visi',todayOnly:false,order:null,notice:null,holdEnd:null,passwordView:null,trailer:false,paying:false,paymentError:null};
 let holdTimer = null;
 
@@ -216,6 +215,10 @@ function lsGet(k){try{return store.ok?localStorage.getItem(k):(k in store.mem?st
 function lsSet(k,v){try{if(store.ok)localStorage.setItem(k,v);else store.mem[k]=v}catch{store.mem[k]=v}}
 function lsDel(k){try{if(store.ok)localStorage.removeItem(k);else delete store.mem[k]}catch{delete store.mem[k]}}
 function load(){try{const s={...clone(seed),...JSON.parse(lsGet(KEY))};usersMigrated=migrateUsers(s.users);return s}catch{return clone(seed)}}
+/* Glabātava tiek lasīta TIKAI tad, kad palīgfunkcijas jau ir gatavas: agrāk `load()` tika izsaukts
+   pirms `const store`, izņēmums tika norīts, un lietotne vienmēr sāka no sākuma stāvokļa, ignorējot
+   saglabātos datus. */
+let state = load();
 function save(){lsSet(KEY,JSON.stringify(state));updateCart()}
 function money(n){return new Intl.NumberFormat('lv-LV',{style:'currency',currency:'EUR'}).format(n)}
 function nowLabel(){return new Intl.DateTimeFormat('lv-LV',{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'}).format(new Date())}
