@@ -28,3 +28,8 @@
 .seat.wheel.selected{background:var(--accent);border-color:var(--ink)}
 .legend .wheel{background:#a9d3f0;border:1px dashed #6fa8dc}
 .seat.wheel.taken{background:#535b6a;border-color:#535b6a;color:#aab0ba}
+
+/* --- US-15.01: valodas pārslēgs galvenē --- */
+.lang-switch{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:13px}
+.lang-switch select{background:var(--surface-2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font:inherit}
+@media(max-width:860px){.lang-switch{font-size:12px}.lang-switch select{padding:4px 6px}}
