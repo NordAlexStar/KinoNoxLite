@@ -2,7 +2,7 @@
 
 Statiskā PB7 mācību lietotne. Atveriet `index.html` pārlūkā: nav vajadzīgs .NET, datubāze, internets vai serveris. Vietējā mapē `assets/` atrodas kino zāles un filmu plakātu attēli.
 
-**Versija 0.4.0**
+**Versija 0.5.0**
 
 ## Kas ir lokāls
 
@@ -64,6 +64,7 @@ Lietotne ir paredzēta prasību analīzei, backlog darbam, pieņemšanas kritēr
 ## Versiju vēsture
 
 - **0.4.0** — septiņi biļešu veidi, tostarp ģimenes un VIP (US-06.01 / US-15.04); tukša atlaižu koda lauka paziņojums (US-07.02 / US-15.05); atlaižu koda termiņš operatora panelī (US-07.03 / US-15.11); seansa labošana un strādājoša poga seansa rindā (US-11.01 / US-15.06); biļetes atcelšana ar saiti no e-pasta (US-10.03 / US-15.07); pircēja izvēle pēc kinoteātra atceltā seansa (US-10.04 / US-15.08); kopīgs vietu stāvoklis starp pārlūka cilnēm (US-05.03 / US-15.09); sesijas noildze ar pirkuma aizsardzību (US-13.02 / US-15.10).
+- **0.5.0** — desmit prasības ar parametriem (US-16.01…US-16.07, US-16.14, US-16.15, US-16.18): meklēšana pēc nosaukuma; kārtošana pēc kritērija un virziena (izvēle saglabājas); ilguma formāts stundās un minūtēs; kataloga filtrs pēc vecuma reitinga; filtrs pēc cenu grupas ar robežām 8,00 un 10,00 €; rīta seansu atlaide −20 % (robeža 12:00); invalīdu vietas zālēs; atlaižu kods ar minimālo summu; fiksētas summas atlaižu kods (ne vairāk par kopsummu); daļēja biļešu atcelšana.
 - **0.3.0** — maksājuma forma ar kartes laukiem un ievades pārbaudi (US-08.04); maksājums tiek apstrādāts uzreiz — stāvoklis, iznākums un maksājuma atsauce biļetē (US-08.01); parole glabājas sāls+jaucējvērtībā, vecie dati tiek pārrakstīti (US-13.01).
 - **0.2.1** — redzama versija un kājene, mobilā navigācija, treilera logs, pirkuma soļu josla, biļetes druka, tukšie stāvokļi, viena faila lejupielāde.
 - **0.2.0** — seansu datumi, filtrs «Šodien», biļešu veidi, 10 minūšu rezervācija, atcelšana ar atmaksu, operatora panelis ar audita žurnālu.

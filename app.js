@@ -1,5 +1,5 @@
 const KEY = 'kino-nox-lite-v1';
-const VERSION = '0.4.0';
+const VERSION = '0.5.0';
 const VAT = 0.21;
 const MAX_SEATS = 8;
 const OPERATOR_PASSWORD = 'op2026';
@@ -90,13 +90,17 @@ function migrateUsers(list) {
   }
   return changed;
 }
-/* US-15.11: agrāk atlaides kodam glabājās tikai procentu skaitlis. Tagad kodam ir arī
-   termiņš, tāpēc veco ierakstu pārrakstām formā {percent, until} — vecā glabātava nesalūzt. */
+/* US-15.11 / US-16.14 / US-16.15: kodam ir veids (procenti vai fiksēta summa), minimālā summa un termiņš.
+   Vecā glabātava glabāja tikai procentu skaitli — tā tiek pārrakstīta palaišanā, skat. migratePromos(). */
 function migratePromos(map) {
   let changed = false;
   for (const [code, val] of Object.entries(map || {})) {
     if (typeof val === 'number') {
-      map[code] = {percent: val, until: ''};
+      map[code] = {kind: 'percent', value: val, min: 0, until: ''};
+      changed = true;
+    } else if (val && val.kind == null) {
+      map[code] = {kind: 'percent', value: Number(val.value != null ? val.value : val.percent) || 0,
+                   min: Number(val.min) || 0, until: val.until || ''};
       changed = true;
     }
   }
@@ -115,7 +119,10 @@ const seed = {
     /* Papildināts pēc klases defektiem BUG-05/06/07 (17.09.2026): sadaļā «Zinātniskā fantastika» bija tikai
        viena filma, tāpēc alfabētisko kārtību tur nevarēja pārbaudīt, un neviena filma nesākās ar «A» —
        «pirmā filma sarakstā» arī nebija pārbaudāma. Šī filma aizpilda abas robus. */
-    {id:5,title:'Atgriešanās orbītā',genre:'Zinātniskā fantastika',year:2026,duration:126,age:'12+',language:'Angļu',subtitles:'Latviešu',director:'Ilze Muižniece',actors:'D. Osis, L. Caune',rating:7.4,trailer:false,price:9.5,accent:"url('assets/poster-atgriesanas-orbita.png')",description:'Mājas stacija klusē jau deviņus gadus. Kad atgriežas pēdējā ekspedīcija, apkalpe atklāj, ka laiks orbītā un uz Zemes rit dažādi.'}
+    {id:5,title:'Atgriešanās orbītā',genre:'Zinātniskā fantastika',year:2026,duration:126,age:'12+',language:'Angļu',subtitles:'Latviešu',director:'Ilze Muižniece',actors:'D. Osis, L. Caune',rating:7.4,trailer:false,price:9.5,accent:"url('assets/poster-atgriesanas-orbita.png')",description:'Mājas stacija klusē jau deviņus gadus. Kad atgriežas pēdējā ekspedīcija, apkalpe atklāj, ka laiks orbītā un uz Zemes rit dažādi.'},
+    /* US-16.03: īsai filmai (mazāk par 60 min) ilguma formāts ir cits — bez šādas filmas
+       formāta pirmo klasi nevarēja pārbaudīt vispār. */
+    {id:6,title:'Nakts maiņa',genre:'Dokumentālā',year:2026,duration:45,age:'7+',language:'Latviešu',subtitles:'Angļu',director:'Rūta Ķēniņa',actors:'–',rating:7.2,trailer:false,price:6.5,accent:"url('assets/poster-neona-pilseta.png')",description:'Īsfilma par nakts maiņas cilvēkiem: dispečeri, maiznieki, slimnīcas dežuranti.'}
   ],
   screenings: [
     {id:1,movieId:1,date:isoDate(0),time:'18:30',hall:'Zāle 1',price:8.5},
@@ -128,10 +135,23 @@ const seed = {
     /* BUG-08: границы суток. Ни одного сеанса 00:00 или 23:59 в данных не было, поэтому проверку
        «фильм виден в Šodien на границе дня» нельзя было выполнить вовсе. Теперь оба края есть. */
     {id:8,movieId:5,date:isoDate(0),time:'00:00',hall:'Zāle 1',price:9.5},
-    {id:9,movieId:5,date:isoDate(0),time:'23:59',hall:'Zāle 2',price:9.5}
+    {id:9,movieId:5,date:isoDate(0),time:'23:59',hall:'Zāle 2',price:9.5},
+    /* US-16.06: rīta atlaidei vajag rīta seansu un robežu tieši 12:00 — abi ir rīt, lai tos
+       varētu nopirkt jebkurā dienas laikā. */
+    {id:10,movieId:1,date:isoDate(1),time:'09:30',hall:'Zāle 1',price:8.5},
+    {id:11,movieId:2,date:isoDate(1),time:'12:00',hall:'Zāle 2',price:9},
+    /* US-16.05: cenu grupu robežas (8,00 / 10,00) — seansi ar tieši šīm cenām. */
+    {id:12,movieId:4,date:isoDate(1),time:'14:15',hall:'Zāle 3',price:8},
+    {id:13,movieId:3,date:isoDate(1),time:'21:30',hall:'Zāle 1',price:10},
+    /* US-16.03 un US-16.06: īsā filma arī rīta seansā (cena 6,50 € — «līdz 8,00» grupa). */
+    {id:14,movieId:6,date:isoDate(1),time:'11:00',hall:'Zāle 3',price:6.5}
   ],
-  halls:{'Zāle 1':{rows:6,seats:10},'Zāle 2':{rows:5,seats:8},'Zāle 3':{rows:7,seats:12}},
-  reserved:{1:['A2','C7'],2:['B4'],3:['A1','A2','D5'],4:['C3'],5:['B6'],6:['E8'],7:[],8:[],9:[]},
+  /* US-16.07: invalīdu vietas ir atzīmētas katrā zālē atsevišķi. */
+  halls:{'Zāle 1':{rows:6,seats:10,inv:['F1','F2']},
+         'Zāle 2':{rows:5,seats:8,inv:['E1']},
+         'Zāle 3':{rows:7,seats:12,inv:['G1','G2']}},
+  reserved:{1:['A2','C7'],2:['B4'],3:['A1','A2','D5'],4:['C3'],5:['B6'],6:['E8'],7:[],8:[],9:[],
+            10:[],11:[],12:[],13:[]},
   ticketTypes:[
     {id:'pieauguso',label:'Pieaugušo',k:1},
     {id:'skolena',label:'Skolēna',k:0.7},
@@ -145,12 +165,14 @@ const seed = {
   users:[],orders:[],
   /* US-15.11: atlaižu kodam ir arī termiņš (tukšs = bez termiņa). Vecā glabātava glabāja
      tikai procentus (skaitli) — tā tiek pārrakstīta palaišanā, skat. migratePromos(). */
-  promos:{BLEGH:{percent:10,until:''},SKOLA25:{percent:25,until:''}},
+  promos:{BLEGH:{kind:'percent',value:10,min:0,until:''},SKOLA25:{kind:'percent',value:25,min:0,until:''}},
+  /* US-16.02: kārtošanas izvēle saglabājas pārlādēšanas laikā. */
+  prefs:{sort:'title',dir:'asc'},
   session:null,
   audit:[],profile:null,operator:false
 };
 
-let view = {screen:'catalog',movieId:null,screeningId:null,seats:[],typeId:'pieauguso',cart:null,filter:'Visi',todayOnly:false,order:null,notice:null,holdEnd:null,passwordView:null,trailer:false,paying:false,paymentError:null,emailOpen:false,cancelToken:null,editingScreening:null,screeningMovie:null};
+let view = {screen:'catalog',movieId:null,screeningId:null,seats:[],typeId:'pieauguso',cart:null,filter:'Visi',todayOnly:false,order:null,notice:null,holdEnd:null,passwordView:null,trailer:false,paying:false,paymentError:null,emailOpen:false,cancelToken:null,editingScreening:null,screeningMovie:null,query:'',age:'visi',priceBand:'visi',cancelSeats:[]};
 let holdTimer = null;
 
 const app = document.querySelector('#app');
@@ -185,17 +207,60 @@ function movie(id){return state.movies.find(x=>x.id===Number(id))}
 function screening(id){return state.screenings.find(x=>x.id===Number(id))}
 function reserved(id){return state.reserved[id]||[]}
 function typeOf(id){return state.ticketTypes.find(t=>t.id===id)||state.ticketTypes[0]}
-function unitPrice(s,typeId){return Math.round(s.price*typeOf(typeId).k*100)/100}
-/* ---------- Atlaižu kods: derīgums un termiņš (US-07.01, US-07.02, US-15.11) ---------- */
-function promoOf(code){const p=state.promos[String(code||'').trim().toUpperCase()];if(p==null)return null;return typeof p==='number'?{percent:p,until:''}:p}
+/* US-16.06: rīta seansi (sākas pirms 12:00) ir par 20 % lētāki; robeža 12:00 vēl nav rīts. */
+const MORNING_UNTIL = '12:00', MORNING_DISCOUNT = 0.2;
+function isMorning(s){return s.time < MORNING_UNTIL}
+function unitPrice(s,typeId){
+  const base=s.price*typeOf(typeId).k;
+  const k=isMorning(s)?(1-MORNING_DISCOUNT):1;
+  return Math.round(base*k*100)/100;
+}
+/* US-16.03: ilgums stundās un minūtēs (59 min, 1 h, 1 h 59 min). */
+function durationLabel(min){
+  const h=Math.floor(min/60),m=min%60;
+  if(min<60)return `${m} min`;
+  if(m===0)return `${h} h`;
+  return `${h} h ${m} min`;
+}
+/* US-16.05: cenu grupas — robežas (8,00 un 10,00) pieder tikai vienai grupai. */
+function priceInBand(price,band){
+  if(!band||band==='visi')return true;
+  if(band==='lidz8')return price<=8;
+  if(band==='no8lidz10')return price>8&&price<=10;
+  if(band==='virs10')return price>10;
+  return true;
+}
+function bandLabel(b){return {lidz8:'līdz 8,00 €',no8lidz10:'no 8,00 līdz 10,00 €',virs10:'virs 10,00 €'}[b]||'visi seansi'}
+/* US-16.07: invalīdu vietas zālē. */
+function invSeats(s){const h=state.halls[s.hall];return (h&&h.inv)||[]}
+/* US-16.02: kārtošanas izvēle saglabājas. */
+function pref(k,def){return (state.prefs&&state.prefs[k]!=null)?state.prefs[k]:def}
+function setPref(k,v){state.prefs=Object.assign({},state.prefs||{},{[k]:v});save()}
+/* ---------- Atlaižu kods: veids, minimums, termiņš (US-07.01, 07.02, 15.11, 16.14, 16.15) ---------- */
+function promoOf(code){
+  const p=state.promos[String(code||'').trim().toUpperCase()];
+  if(p==null)return null;
+  if(typeof p==='number')return {kind:'percent',value:p,min:0,until:''};
+  return {kind:p.kind||'percent',value:Number(p.value!=null?p.value:p.percent)||0,
+          min:Number(p.min)||0,until:p.until||''};
+}
 function promoExpired(code){const p=promoOf(code);return !!(p&&p.until&&new Date(p.until+'T23:59:59')<new Date())}
-function promoPercent(code){const p=promoOf(code);return p&&!promoExpired(code)?Number(p.percent)||0:0}
+/* Aprēķins: procenti vai fiksēta summa; fiksētā atlaide nekad nav lielāka par kopsummu. */
+function promoCalc(code,subtotal){
+  const p=promoOf(code);
+  if(!p)return {ok:false,reason:'nederīgs'};
+  if(promoExpired(code))return {ok:false,reason:'beidzies'};
+  if(p.min>subtotal)return {ok:false,reason:'min',min:p.min};
+  const off=p.kind==='eur'?Math.min(p.value,subtotal):Math.round(subtotal*p.value/100*100)/100;
+  return {ok:true,off,kind:p.kind,value:p.value,min:p.min,
+          label:p.kind==='eur'?`−${money(p.value)}`:`−${p.value}%`};
+}
 function startsAt(s){return new Date(s.date+'T'+s.time+':00')}
 function titleArt(m){return m.title.replace(/ /g,'\n')}
 function audit(action,detail){state.audit.push({ts:nowLabel(),action,detail});if(state.audit.length>60)state.audit.shift()}
 function toast(text){const t=document.querySelector('#toast');t.textContent=text;t.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>t.classList.remove('show'),2800)}
 function updateCart(){const n=view.cart&&view.cart.seats?view.cart.seats.length:0;document.querySelector('#cart-count').textContent=n}
-function nav(screen){stopHold();if(location.hash){try{history.replaceState(null,'',location.href.replace(/#.*$/,''))}catch(e){}}view={screen,movieId:null,screeningId:null,seats:[],typeId:'pieauguso',cart:null,filter:view.filter,todayOnly:view.todayOnly,order:null,notice:null,holdEnd:null,passwordView:null,paying:false,paymentError:null,emailOpen:false,cancelToken:null,editingScreening:null,screeningMovie:null};render();app.focus()}
+function nav(screen){stopHold();if(location.hash){try{history.replaceState(null,'',location.href.replace(/#.*$/,''))}catch(e){}}view={screen,movieId:null,screeningId:null,seats:[],typeId:'pieauguso',cart:null,filter:view.filter,todayOnly:view.todayOnly,order:null,notice:null,holdEnd:null,passwordView:null,paying:false,paymentError:null,emailOpen:false,cancelToken:null,editingScreening:null,screeningMovie:null,query:'',age:'visi',priceBand:'visi',cancelSeats:[]};render();app.focus()}
 
 function stopHold(){if(holdTimer){clearInterval(holdTimer);holdTimer=null}}
 function holdLabel(ms){const s=Math.max(0,Math.floor(ms/1000));return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`}
@@ -251,31 +316,73 @@ function onStoreChanged(){
 }
 
 /* ---------- Katalogs ---------- */
+/* US-16.02: kārtošana pēc kritērija un virziena; izvēle glabājas state.prefs. */
+function movieSort(){
+  const crit=pref('sort','title'),sign=pref('dir','asc')==='desc'?-1:1;
+  return (a,b)=>{
+    let r=0;
+    if(crit==='duration')r=a.duration-b.duration;
+    else if(crit==='rating')r=a.rating-b.rating;
+    else r=a.title.localeCompare(b.title,'lv');
+    if(r===0)r=a.title.localeCompare(b.title,'lv');   // vienādas vērtības — nosaukums kā otrais kritērijs
+    return r*sign;
+  };
+}
+function sortLabel(){
+  const crit=pref('sort','title'),dir=pref('dir','asc');
+  const c={title:'nosaukums',duration:'ilgums',rating:'vērtējums'}[crit]||'nosaukums';
+  return `${c} (${dir==='asc'?'augoši':'dilstoši'})`;
+}
 function catalog(){
   const genres=['Visi',...new Set(state.movies.map(x=>x.genre))];
   const today=todayISO();
+  const q=(view.query||'').trim().toLowerCase();
   let items=state.movies.filter(m=>view.filter==='Visi'||m.genre===view.filter);
+  /* US-16.04: vecuma reitings — «12+» rāda 12+ un 16+, «16+» tikai 16+. */
+  if(view.age&&view.age!=='visi'){
+    const min=Number(String(view.age).replace('+',''));
+    items=items.filter(m=>Number(String(m.age).replace('+',''))>=min);
+  }
+  /* US-16.05: cenu grupa — filmas, kam ir seanss šajā grupā. */
+  if(view.priceBand&&view.priceBand!=='visi')
+    items=items.filter(m=>state.screenings.some(s=>s.movieId===m.id&&priceInBand(s.price,view.priceBand)));
+  /* US-16.01: meklēšana pēc nosaukuma daļas, bez reģistra jutības. */
+  if(q) items=items.filter(m=>m.title.toLowerCase().includes(q));
   if(view.todayOnly) items=items.filter(m=>state.screenings.some(s=>s.movieId===m.id&&s.date===today));
-  items=[...items].sort((a,b)=>a.title.localeCompare(b.title,'lv'));
+  items=[...items].sort(movieSort());
   return `<section><div class="catalog-hero"><div><p class="eyebrow">${nowLabel()}</p><h1 class="page-title">Atrodi savu nākamo seansu.</h1><p class="lede">KINO NOX Lite ir lokāla mācību sistēma. Dati paliek šajā pārlūkā.</p></div></div>
   ${store.ok?'':'<div class="notice error">Šis pārlūks neļauj saglabāt datus (localStorage) — izmaiņas paliks tikai līdz lapas aizvēršanai. Ieteicams atvērt failu lokāli vai izmantot citu pārlūku.</div>'}
-  <div class="utility-row"><div class="filters">${genres.map(g=>`<button class="${g===view.filter?'active':''}" data-filter="${g}">${g}</button>`).join('')}<button class="${view.todayOnly?'active':''}" data-action="today">Šodien</button></div><span class="meta">${items.length} filmas · kārtotas alfabētiski</span></div>
-  ${items.length?`<div class="movie-grid">${items.map(m=>`<article class="movie" data-movie="${m.id}"><div class="poster" style="--poster:${m.accent}">${titleArt(m).replace(/\n/g,'<br>')}</div><h2>${m.title}</h2><div class="meta">${m.genre} · ${m.year} · ${m.duration} min · ${m.age}</div><div class="meta">★ ${m.rating.toFixed(1)}</div><div class="price">No ${money(m.price)}</div><div class="card-cta">Skatīt seansus →</div></article>`).join('')}</div>`:'<div class="empty-state">Neviena filma neatbilst izvēlētajam filtram.<div class="form-actions" style="justify-content:center"><button class="button secondary" data-filter="Visi">Rādīt visas filmas</button></div></div>'}</section>`
+  <div class="utility-row"><div class="filters">${genres.map(g=>`<button class="${g===view.filter?'active':''}" data-filter="${g}">${g}</button>`).join('')}<button class="${view.todayOnly?'active':''}" data-action="today">Šodien</button></div>
+  <span class="meta">${items.length} filmas · kārtotas: ${sortLabel()}</span></div>
+  <div class="utility-row"><div class="form-grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));width:100%">
+  <label>Meklēt filmu<input id="search" value="${view.query||''}" placeholder="Piemēram, orbītā"></label>
+  <label>Kārtot<select id="sort-crit"><option value="title"${pref('sort','title')==='title'?' selected':''}>Nosaukums</option><option value="duration"${pref('sort','title')==='duration'?' selected':''}>Ilgums</option><option value="rating"${pref('sort','title')==='rating'?' selected':''}>Vērtējums</option></select></label>
+  <label>Virziens<select id="sort-dir"><option value="asc"${pref('dir','asc')==='asc'?' selected':''}>Augoši</option><option value="desc"${pref('dir','asc')==='desc'?' selected':''}>Dilstoši</option></select></label>
+  <label>Vecuma reitings<select id="age-filter"><option value="visi"${(view.age||'visi')==='visi'?' selected':''}>Visi</option><option value="12+"${view.age==='12+'?' selected':''}>12+ un augstāk</option><option value="16+"${view.age==='16+'?' selected':''}>Tikai 16+</option></select></label>
+  <label>Cena<select id="price-filter"><option value="visi"${(view.priceBand||'visi')==='visi'?' selected':''}>Visi</option><option value="lidz8"${view.priceBand==='lidz8'?' selected':''}>Līdz 8,00 €</option><option value="no8lidz10"${view.priceBand==='no8lidz10'?' selected':''}>No 8,00 līdz 10,00 €</option><option value="virs10"${view.priceBand==='virs10'?' selected':''}>Virs 10,00 €</option></select></label>
+  </div></div>
+  ${items.length?`<div class="movie-grid">${items.map(m=>`<article class="movie" data-movie="${m.id}"><div class="poster" style="--poster:${m.accent}">${titleArt(m).replace(/\n/g,'<br>')}</div><h2>${m.title}</h2><div class="meta">${m.genre} · ${m.year} · ${durationLabel(m.duration)} · ${m.age}</div><div class="meta">★ ${m.rating.toFixed(1)}</div><div class="price">No ${money(m.price)}</div><div class="card-cta">Skatīt seansus →</div></article>`).join('')}</div>`
+   :`<div class="empty-state">${q?`Neviena filma neatbilst meklēšanai «${view.query}».`:'Neviena filma neatbilst izvēlētajiem filtriem.'}<div class="form-actions" style="justify-content:center"><button class="button secondary" data-action="reset-filters">Rādīt visas filmas</button></div></div>`}</section>`
 }
 
 /* ---------- Filmas kartīte ---------- */
 function movieDetail(){
   const m=movie(view.movieId);
-  const shows=[...state.screenings].filter(x=>x.movieId===m.id).sort((a,b)=>startsAt(a)-startsAt(b));
+  const band=view.priceBand||'visi';
+  const all=[...state.screenings].filter(x=>x.movieId===m.id).sort((a,b)=>startsAt(a)-startsAt(b));
+  /* US-16.05: cenu grupa filtrē seansus arī filmas kartītē. */
+  const shows=all.filter(s=>priceInBand(s.price,band));
   const groups=[...new Set(shows.map(s=>s.date))];
   return `<section class="detail-layout"><div><div class="detail-poster" style="--poster:${m.accent}">${titleArt(m).replace(/\n/g,'<br>')}</div></div>
   <div class="detail-copy"><button class="subtle" data-nav="catalog">← Atpakaļ uz katalogu</button><p class="eyebrow">${m.genre}</p><h1>${m.title}</h1>
-  <div class="facts"><span>${m.year}</span><span>${m.duration} min</span><span>${m.age}</span><span>${m.language}</span><span>Subtitri: ${m.subtitles}</span><span>★ ${m.rating.toFixed(1)}</span></div>
+  <div class="facts"><span>${m.year}</span><span>${durationLabel(m.duration)}</span><span>${m.age}</span><span>${m.language}</span><span>Subtitri: ${m.subtitles}</span><span>★ ${m.rating.toFixed(1)}</span></div>
   <p>${m.description}</p><p class="meta">Režisors: ${m.director} · Lomās: ${m.actors}</p>
   ${m.trailer?'<button class="button secondary" data-action="trailer">▶ Skatīties treileri</button>':'<p class="meta">Treileris nav pieejams.</p>'}
+  ${band!=='visi'?`<p class="meta">Cenu filtrs «${bandLabel(band)}»: redzami ${shows.length} no ${all.length} seansiem.</p>`:''}
   ${groups.map(g=>`<div class="panel"><h2>${dateLabel(g)}</h2>${shows.filter(s=>s.date===g).map(s=>{
     const closed=Date.now()>startsAt(s).getTime()-30*60*1000;
-    return `<div class="showtime"><div><strong>${s.time}</strong><div class="meta">${s.hall} · ${dateLabel(s.date)} · no ${money(s.price)}</div></div>${closed?'<span class="tag">Pārdošana beigusies</span>':`<button class="button" data-show="${s.id}">Izvēlēties</button>`}</div>`}).join('')}</div>`).join('')}
+    return `<div class="showtime"><div><strong>${s.time}</strong>${isMorning(s)?' <span class="tag">Rīta atlaide −20 %</span>':''}<div class="meta">${s.hall} · ${dateLabel(s.date)} · no ${money(s.price)}</div></div>${closed?'<span class="tag">Pārdošana beigusies</span>':`<button class="button" data-show="${s.id}">Izvēlēties</button>`}</div>`}).join('')}</div>`).join('')}
+  ${all.length&&!shows.length?'<div class="empty-state">Neviens seanss neatbilst izvēlētajai cenu grupai.</div>':''}
   ${view.notice?notice(view.notice):''}</div></section>`
 }
 
@@ -283,18 +390,20 @@ function movieDetail(){
 function booking(){
   const s=screening(view.screeningId),m=movie(s.movieId),hall=state.halls[s.hall];
   const rows='ABCDEFG'.slice(0,hall.rows).split('');
-  const seatRows=rows.map(r=>`<div class="seat-row" style="--seats:${hall.seats}"><span class="row-label">${r}</span>${Array.from({length:hall.seats},(_,i)=>{let n=`${r}${i+1}`,taken=reserved(s.id).includes(n),selected=view.seats.includes(n);return `<button class="seat ${taken?'taken':''} ${selected?'selected':''}" data-seat="${n}" ${taken?'disabled':''}>${i+1}</button>`}).join('')}</div>`).join('');
+  const inv=invSeats(s);   // US-16.07: invalīdu vietas ir atzīmētas atsevišķi
+  const seatRows=rows.map(r=>`<div class="seat-row" style="--seats:${hall.seats}"><span class="row-label">${r}</span>${Array.from({length:hall.seats},(_,i)=>{let n=`${r}${i+1}`,taken=reserved(s.id).includes(n),selected=view.seats.includes(n),wheel=inv.includes(n);return `<button class="seat ${taken?'taken':''} ${selected?'selected':''} ${wheel?'wheel':''}" data-seat="${n}" ${taken?'disabled':''}${wheel?' title="Invalīdu vieta"':''}>${i+1}</button>`}).join('')}</div>`).join('');
   const up=unitPrice(s,view.typeId);
   return `<section>${steps('booking')}<button class="subtle" data-movie="${m.id}">← ${m.title}</button><div class="booking-layout"><div>
   <p class="eyebrow">${m.title} · ${s.time} · ${s.hall} · ${dateLabel(s.date)}</p><h1 class="page-title">Izvēlies vietas.</h1>
   <p class="meta">Rezervācija spēkā: <span class="timer" id="hold">${view.holdEnd?holdLabel(view.holdEnd-Date.now()):'10:00'}</span> · vienā pirkumā līdz ${MAX_SEATS} vietām</p>
   <div class="screen">EKRĀNS</div><div class="seat-map">${seatRows}</div>
-  <div class="legend"><span><i></i>Brīva</span><span><i class="taken"></i>Aizņemta</span><span><i class="selected"></i>Izvēlēta</span></div></div>
+  <div class="legend"><span><i></i>Brīva</span><span><i class="taken"></i>Aizņemta</span><span><i class="selected"></i>Izvēlēta</span><span><i class="wheel"></i>Invalīdu vieta</span></div></div>
   <aside class="panel"><h2>Pasūtījums</h2>
   <div class="summary-row"><span>Seanss</span><strong>${s.time}</strong></div>
   <div class="summary-row"><span>Datums</span><strong>${dateLabel(s.date)}</strong></div>
   <div class="summary-row"><span>Vietas</span><strong>${view.seats.length?view.seats.join(', '):'Nav izvēlētas'}</strong></div>
   <div class="form-grid"><label>Biļetes veids<select id="ticket-type">${state.ticketTypes.map(t=>`<option value="${t.id}" ${t.id===view.typeId?'selected':''}>${t.label} · ${money(Math.round(s.price*t.k*100)/100)}</option>`).join('')}</select></label></div>
+  ${isMorning(s)?'<div class="summary-row"><span>Rīta atlaide</span><strong>−20 %</strong></div>':''}
   <div class="summary-row"><span>Cena par vietu</span><strong>${money(up)}</strong></div>
   <div class="summary-row total"><span>Kopā</span><span>${money(Math.round(up*view.seats.length*100)/100)}</span></div>
   <div class="form-actions"><button class="button" data-action="add-cart" ${view.seats.length?'':'disabled'}>Turpināt uz grozu</button></div>
@@ -327,16 +436,19 @@ function cart(){
   if(!c) return `<section><p class="eyebrow">Grozs</p><h1 class="page-title">Grozs ir tukšs.</h1><p class="lede">Izvēlieties filmu, seansu un vietas.</p><button class="button" data-nav="catalog">Skatīt filmas</button></section>`;
   const m=movie(c.movieId),s=screening(c.screeningId),t=typeOf(c.typeId);
   const promo=(c.promo||'').toUpperCase();
-  /* US-15.05: tukša lauka gadījumā ir savs paziņojums; US-15.11: beidzies termiņš ir atsevišķs gadījums. */
-  const discount=promoPercent(promo);
+  const subtotal=Math.round(c.unit*c.seats.length*100)/100;
+  /* US-15.05 (tukšs lauks), US-15.11 (termiņš), US-16.14 (minimums), US-16.15 (fiksēta summa). */
+  const res=c.promo?promoCalc(promo,subtotal):null;
+  const off=res&&res.ok?res.off:0;
+  const total=Math.round((subtotal-off)*100)/100;
+  const vat=Math.round(subtotal*VAT/(1+VAT)*100)/100;
   const promoText=c.promoNotice
     ? c.promoNotice
-    : (c.promo ? (discount ? `Atlaide ${discount}% ir piemērota.`
-                           : (promoExpired(promo) ? 'Atlaižu koda termiņš ir beidzies.' : 'Nederīgs atlaides kods.')) : '');
-  const promoType=c.promoNotice||!discount?'error':'success';
-  const subtotal=Math.round(c.unit*c.seats.length*100)/100;
-  const total=Math.round(subtotal*(1-discount/100)*100)/100;
-  const vat=Math.round(subtotal*VAT/(1+VAT)*100)/100;
+    : (c.promo ? (res.ok ? `Atlaide ${res.label} ir piemērota.`
+        : (res.reason==='beidzies' ? 'Atlaižu koda termiņš ir beidzies.'
+        : (res.reason==='min' ? `Kods darbojas pasūtījumiem no ${money(res.min)}.`
+        : 'Nederīgs atlaides kods.'))) : '');
+  const promoType=c.promoNotice||!(res&&res.ok)?'error':'success';
   return `<section>${steps('cart')}<div class="booking-layout"><div><p class="eyebrow">Pirkuma apstiprināšana</p><h1 class="page-title">${m.title}</h1>
   <p class="lede">${dateLabel(s.date)} · ${s.time} · ${s.hall} · vietas ${c.seats.join(', ')}</p>
   <div class="panel"><h2>Biļetes veids</h2><p class="meta">${t.label} · ${money(c.unit)} par vietu · ${c.seats.length} biļete(s)</p></div>
@@ -346,7 +458,8 @@ function cart(){
   ${paymentPanel(total)}</div>
   <aside class="panel"><h2>Kopsavilkums</h2>
   <div class="summary-row"><span>${c.seats.length} × ${t.label}</span><strong>${money(subtotal)}</strong></div>
-  ${discount?`<div class="summary-row"><span>Atlaide</span><strong>−${discount}%</strong></div>`:''}
+  ${isMorning(s)?'<div class="summary-row"><span>Rīta atlaide</span><strong>−20 %</strong></div>':''}
+  ${off?`<div class="summary-row"><span>Atlaide ${res.label}</span><strong>−${money(off)}</strong></div>`:''}
   <div class="summary-row"><span>t. sk. PVN ${Math.round(VAT*100)}%</span><strong>${money(vat)}</strong></div>
   <div class="summary-row total"><span>Kopā</span><span>${money(total)}</span></div>
   <div class="form-grid"><label>E-pasts biļetei<input id="order-email" type="email" value="${state.profile?.email||''}" placeholder="vards@example.com"></label></div>
@@ -383,12 +496,18 @@ function ticket(){
   <div class="form-actions"><button class="button" data-action="choose-refund" data-id="${o.id}">Pieprasīt atmaksu ${money(o.total)}</button></div>
   ${options.length?`<div class="form-grid"><label>Cita biļete<select id="replacement">${options.map(x=>`<option value="${x.id}">${dateLabel(x.date)} · ${x.time} · ${x.hall} · no ${money(x.price)}</option>`).join('')}</select></label></div>
   <div class="form-actions"><button class="button secondary" data-action="choose-screening" data-id="${o.id}">Izvēlēties citu seansu</button></div>`:'<p class="meta">Cits šīs filmas seanss šobrīd nav pieejams.</p>'}</div>`:''}
+  ${/* US-16.18: daļēja atcelšana — tikai vairāku vietu pasūtījumam, kas vēl ir derīgs. */''}
+  ${cancellable&&o.seats.length>1?`<div class="panel"><h2>Atcelt daļu biļešu</h2>
+  <p class="meta">Atzīmē vietas, kuras atcelt. Atmaksa tiks aprēķināta tikai par atzīmētajām; pārējās biļetes paliek derīgas.</p>
+  <div class="form-grid">${o.seats.map(n=>`<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" class="cancel-seat" value="${n}" ${(view.cancelSeats||[]).includes(n)?'checked':''}> Vieta ${n} · ${money(o.unit)}</label>`).join('')}</div>
+  <div class="form-actions"><button class="button danger" data-action="cancel-seats" data-id="${o.id}">Atcelt atzīmētās vietas</button></div></div>`:''}
   <div class="form-actions">${cancellable?`<button class="button danger" data-action="cancel-order" data-id="${o.id}">Atcelt biļeti</button>`:''}
   <button class="button secondary" data-action="print">Drukāt biļeti</button>
   <button class="button secondary" data-action="send-link" data-id="${o.id}">Sūtīt saiti uz e-pastu (simulēts)</button>
   <button class="button" data-nav="catalog">Atpakaļ uz katalogu</button><button class="button secondary" data-nav="profile">Mani pasūtījumi</button></div>
   ${view.emailOpen?emailBlock(o):''}
   ${o.cancelled?notice(`Biļete atcelta. Atmaksāta summa: ${money(o.refunded)}.`,o.refunded?'success':'error'):''}
+  ${!o.cancelled&&o.refunded?notice(`Par atceltajām vietām atmaksāts: ${money(o.refunded)}.`,(o.refunded>o.total?'error':'success')):''}
   ${view.notice?notice(view.notice):''}</section>`
 }
 /* US-15.08: citi šīs pašas filmas seansi, kurus vēl var nopirkt. */
@@ -456,8 +575,8 @@ function admin(){
   <p class="eyebrow">Operatora panelis</p><h1 class="page-title">Mācību dati</h1><p class="lede">Izmaiņas uzreiz saglabājas šajā pārlūkā. Izmantojiet atiestatīšanu, lai atgrieztu sākuma variantu.</p>
   <div class="panel"><h2>Filmas (${state.movies.length})</h2><div class="admin-list">${movies}</div></div>
   <div class="panel"><h2>Aktīvie seansi (${state.screenings.length})</h2><div class="admin-list">${screenings}</div></div>
-  <div class="panel"><h2>Atlaižu kodi</h2><div class="admin-list">${Object.entries(state.promos).map(([k,v])=>{const p=promoOf(k)||{percent:v,until:''};return `<div class="admin-row"><span><strong>${k}</strong> · −${p.percent}% · ${p.until?(promoExpired(k)?`termiņš ${p.until} (beidzies)`:`termiņš ${p.until}`):'bez termiņa'}</span></div>`}).join('')}</div>
-  <div class="form-grid"><label>Jauns kods<input id="promo-code" placeholder="PIEMĒRAM, VASARA"></label><label>Atlaide %<input id="promo-value" type="number" min="1" max="50" value="15"></label><label>Termiņš, ja vajag<input id="promo-until" type="date"></label></div>
+  <div class="panel"><h2>Atlaižu kodi</h2><div class="admin-list">${Object.entries(state.promos).map(([k])=>{const p=promoOf(k)||{kind:'percent',value:0,min:0,until:''};const val=p.kind==='eur'?`−${money(p.value)}`:`−${p.value}%`;return `<div class="admin-row"><span><strong>${k}</strong> · ${val}${p.min?` · no ${money(p.min)}`:''} · ${p.until?(promoExpired(k)?`termiņš ${p.until} (beidzies)`:`termiņš ${p.until}`):'bez termiņa'}</span></div>`}).join('')}</div>
+  <div class="form-grid"><label>Jauns kods<input id="promo-code" placeholder="PIEMĒRAM, VASARA"></label><label>Veids<select id="promo-kind"><option value="percent">Procenti</option><option value="eur">Fiksēta summa €</option></select></label><label>Atlaide<input id="promo-value" type="number" min="1" max="50" value="15"></label><label>Minimālā summa €<input id="promo-min" type="number" min="0" step="0.5" value="0"></label><label>Termiņš, ja vajag<input id="promo-until" type="date"></label></div>
   <div class="form-actions"><button class="button secondary" data-action="add-promo">Pievienot kodu</button></div></div>
   <div class="panel"><h2>Audita žurnāls</h2><div class="admin-list">${state.audit.length?state.audit.slice().reverse().map(a=>`<div class="admin-row"><span class="meta">${a.ts} · <strong>${a.action}</strong> · ${a.detail}</span></div>`).join(''):'<p class="meta">Ierakstu vēl nav.</p>'}</div></div>
   </div>
@@ -553,14 +672,15 @@ function finishPayment(email,last4,started){
   if(c.seats.some(x=>taken.includes(x))){view.paying=false;toast('Kāda vieta vairs nav pieejama. Atgriezieties pie seansa.');return render()}
   state.reserved[c.screeningId]=[...taken,...c.seats];
   const subtotal=Math.round(c.unit*c.seats.length*100)/100;
-  const discount=promoPercent(c.promo);
-  const total=Math.round(subtotal*(1-discount/100)*100)/100;
+  const res=c.promo?promoCalc(c.promo,subtotal):null;
+  const off=res&&res.ok?res.off:0;
+  const total=Math.round((subtotal-off)*100)/100;
   const vat=Math.round(subtotal*VAT/(1+VAT)*100)/100;
   const ms=Date.now()-started;
   const payment={status:'apstiprinats',ref:'PAY-'+String(Date.now()).slice(-6),at:nowLabel(),ms,card:'•••• '+last4};
-  const o={id:'KN-'+String(Date.now()).slice(-6),movieId:c.movieId,screeningId:c.screeningId,seats:c.seats,typeId:c.typeId,unit:c.unit,subtotal,discount,total,vat,email,created:nowLabel(),token:Math.random().toString(36).slice(2,10).toUpperCase(),cancelled:false,refunded:0,screenCancelled:false,payment};
+  const o={id:'KN-'+String(Date.now()).slice(-6),movieId:c.movieId,screeningId:c.screeningId,seats:c.seats,typeId:c.typeId,unit:c.unit,subtotal,promo:(c.promo||''),promoOff:off,total,vat,email,created:nowLabel(),token:Math.random().toString(36).slice(2,10).toUpperCase(),cancelled:false,refunded:0,screenCancelled:false,payment};
   state.orders.push(o);save();
-  view={...view,screen:'ticket',order:o,seats:[],cart:null,notice:null,holdEnd:null,paying:false,paymentError:null,emailOpen:false,cancelToken:null,editingScreening:null,screeningMovie:null};stopHold();render();
+  view={...view,screen:'ticket',order:o,seats:[],cart:null,notice:null,holdEnd:null,paying:false,paymentError:null,emailOpen:false,cancelToken:null,editingScreening:null,screeningMovie:null,query:'',age:'visi',priceBand:'visi',cancelSeats:[]};stopHold();render();
   toast(`Maksājums apstiprināts uzreiz (${(ms/1000).toFixed(1)} s).`);
 }
 
@@ -573,6 +693,7 @@ document.addEventListener('click',e=>{
   if(b.dataset.action==='print')return window.print();
   if(b.dataset.filter){view.filter=b.dataset.filter;return render()}
   if(b.dataset.action==='today'){view.todayOnly=!view.todayOnly;return render()}
+  if(b.dataset.action==='reset-filters'){view.filter='Visi';view.todayOnly=false;view.age='visi';view.priceBand='visi';view.query='';return render()}
   if(b.dataset.movie){stopHold();view.screen='movie';view.movieId=Number(b.dataset.movie);view.notice=null;return render()}
   if(b.dataset.show){view.screen='booking';view.screeningId=Number(b.dataset.show);view.seats=[];view.holdEnd=null;view.notice=null;return render()}
   if(b.dataset.seat){
@@ -595,9 +716,29 @@ document.addEventListener('click',e=>{
     o.cancelled=true;
     /* Mīna Nr.4 paliek apzināti: parastajā atcelšanā atmaksa tiek rēķināta no seansa cenas,
        nevis no samaksātās summas. Ja seansu jau atcēla kinoteātris, atgriežam apmaksāto summu. */
-    o.refunded=s?Math.round(s.price*o.seats.length*100)/100:o.total;
+    const add=s?Math.round(s.price*o.seats.length*100)/100:o.total;
+    o.refunded=Math.round(((o.refunded||0)+add)*100)/100;
     state.reserved[o.screeningId]=reserved(o.screeningId).filter(n=>!o.seats.includes(n));
     save();view.order=o;return render();
+  }
+  /* US-16.18: daļēja atcelšana — atmaksa tikai par atzīmētajām vietām. */
+  if(b.dataset.action==='cancel-seats'){
+    const o=state.orders.find(x=>x.id===b.dataset.id);
+    const s=screening(o.screeningId);
+    const picked=(view.cancelSeats||[]).filter(n=>o.seats.includes(n));
+    if(!picked.length){view.notice='Atzīmējiet vismaz vienu vietu, ko atcelt.';return render()}
+    const refund=s?Math.round(s.price*picked.length*100)/100:0;   // tā pati formula kā pilnajā atcelšanā
+    o.refunded=Math.round(((o.refunded||0)+refund)*100)/100;
+    o.seats=o.seats.filter(n=>!picked.includes(n));
+    o.cancelled=o.seats.length===0;
+    if(o.cancelled)o.cancelledAll=true;
+    state.reserved[o.screeningId]=reserved(o.screeningId).filter(n=>!picked.includes(n));
+    view.cancelSeats=[];
+    save();view.order=o;
+    view.notice=o.cancelled
+      ?`Atceltas visas vietas — biļete slēgta. Atmaksāta summa: ${money(o.refunded)}.`
+      :`Atceltas vietas: ${picked.join(', ')}. Atmaksāts: ${money(refund)}. Derīgās vietas: ${o.seats.join(', ')}.`;
+    return render();
   }
   /* US-15.08: pircēja izvēle pēc kinoteātra atceltā seansa. */
   if(b.dataset.action==='choose-refund'){
@@ -707,27 +848,51 @@ document.addEventListener('click',e=>{
   }
   if(b.dataset.action==='add-promo'){
     const code=document.querySelector('#promo-code').value.trim().toUpperCase(),
+          kindEl=document.querySelector('#promo-kind'),
+          kind=kindEl?kindEl.value:'percent',
           val=Number(document.querySelector('#promo-value').value),
+          minEl=document.querySelector('#promo-min'),
+          min=minEl?(Number(minEl.value)||0):0,
           untilInput=document.querySelector('#promo-until'),
           until=untilInput?untilInput.value:'';
     if(!code||!val){view.notice='Norādiet koda nosaukumu un atlaidi.';return render()}
     /* Mīna Nr.7 paliek apzināti: maksimālā atlaide (50 %) netiek pārbaudīta. */
-    state.promos[code]={percent:val,until};
-    audit('Pievienots atlaides kods',`${code} · −${val}%${until?` · termiņš ${until}`:''}`);
+    state.promos[code]={kind,value:val,min,until};
+    audit('Pievienots atlaides kods',`${code} · ${kind==='eur'?`−${money(val)}`:`−${val}%`}${min?` · no ${money(min)}`:''}${until?` · termiņš ${until}`:''}`);
     save();view.notice='Atlaides kods pievienots.';return render();
   }
   if(b.dataset.action==='reset'){
     const keepProfile=state.profile;
     state=clone(seed);state.profile=keepProfile;
     lsDel(KEY);save();
-    view={screen:'catalog',movieId:null,screeningId:null,seats:[],typeId:'pieauguso',cart:null,filter:'Visi',todayOnly:false,order:null,notice:null,holdEnd:null,passwordView:null,paying:false,paymentError:null,emailOpen:false,cancelToken:null,editingScreening:null,screeningMovie:null};
+    view={screen:'catalog',movieId:null,screeningId:null,seats:[],typeId:'pieauguso',cart:null,filter:'Visi',todayOnly:false,order:null,notice:null,holdEnd:null,passwordView:null,paying:false,paymentError:null,emailOpen:false,cancelToken:null,editingScreening:null,screeningMovie:null,query:'',age:'visi',priceBand:'visi',cancelSeats:[]};
     audit('Atiestatīti dati','Sākuma stāvoklis');
     toast('Mācību dati ir atiestatīti.');return render();
   }
 });
 
+/* US-16.01: meklēšana rakstot — pēc pārzīmēšanas fokuss atgriežas laukā. */
+document.addEventListener('input',e=>{
+  if(e.target.id!=='search')return;
+  view.query=e.target.value;
+  render();
+  const el=document.querySelector('#search');
+  if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length)}
+});
 document.addEventListener('change',e=>{
   if(e.target.id==='ticket-type'){view.typeId=e.target.value;return render()}
+  /* US-16.02: kārtošana saglabājas; US-16.04 un US-16.05: filtri. */
+  if(e.target.id==='sort-crit'){setPref('sort',e.target.value);return render()}
+  if(e.target.id==='sort-dir'){setPref('dir',e.target.value);return render()}
+  if(e.target.id==='age-filter'){view.age=e.target.value;return render()}
+  if(e.target.id==='price-filter'){view.priceBand=e.target.value;return render()}
+  /* US-16.18: atzīmes daļējai atcelšanai — bez pārzīmēšanas, lai atzīmes nepazustu. */
+  if(e.target.classList&&e.target.classList.contains('cancel-seat')){
+    const set=new Set(view.cancelSeats||[]);
+    if(e.target.checked)set.add(e.target.value);else set.delete(e.target.value);
+    view.cancelSeats=[...set];
+    return;
+  }
 });
 document.addEventListener('click',e=>{if(e.target.dataset&&e.target.dataset.backdrop){view.trailer=false;render()}},true);
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&view.trailer){view.trailer=false;render()}});

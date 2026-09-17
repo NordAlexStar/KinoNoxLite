@@ -22,3 +22,9 @@
 .card-cta{margin-top:8px;color:var(--accent);font-size:13px;font-weight:700;opacity:0;transition:opacity .18s}
 .movie:hover .card-cta,.movie:focus-visible .card-cta{opacity:1}
 @media(hover:none){.card-cta{opacity:1}}
+
+/* --- US-16.07: invalīdu vietas --- */
+.seat.wheel{border:2px dashed #6fa8dc;background:#a9d3f0;color:#12283a}
+.seat.wheel.selected{background:var(--accent);border-color:var(--ink)}
+.legend .wheel{background:#a9d3f0;border:1px dashed #6fa8dc}
+.seat.wheel.taken{background:#535b6a;border-color:#535b6a;color:#aab0ba}
