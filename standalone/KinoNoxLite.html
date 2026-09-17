@@ -69,7 +69,7 @@
 <body>
   <a class="skip-link" href="#app">Pāriet uz saturu</a>
   <header class="topbar">
-    <button class="brand" data-action="home" aria-label="KINO NOX sākumlapa">KINO <i>NOX</i><small>Lite · <span data-version>0.7.0</span></small></button>
+    <button class="brand" data-action="home" aria-label="KINO NOX sākumlapa">KINO <i>NOX</i><small>Lite · <span data-version>0.7.1</span></small></button>
     <nav aria-label="Galvenā navigācija">
       <button data-nav="catalog">Filmas</button>
       <button data-nav="profile">Mans profils</button>
@@ -92,7 +92,7 @@
 
   <footer class="site-footer">
     <div>
-      <strong>KINO NOX Lite</strong> · <span data-version>0.7.0</span> · mācību vide
+      <strong>KINO NOX Lite</strong> · <span data-version>0.7.1</span> · mācību vide
       <br><span class="meta">PB7 «Programmu testēšana» · dati paliek šajā pārlūkā · © <span data-year>2026</span> KINO NOX</span>
     </div>
     <div class="footer-links">
@@ -106,7 +106,7 @@
   <div id="toast" role="status" aria-live="polite"></div>
   <script>
 const KEY = 'kino-nox-lite-v1';
-const VERSION = '0.7.0';
+const VERSION = '0.7.1';
 const VAT = 0.21;
 const MAX_SEATS = 8;
 const OPERATOR_PASSWORD = 'op2026';
@@ -340,7 +340,7 @@ const I18N_LEX = {
       'Latviešu': 'Латышский', 'Zinātniskā fantastika': 'Научная фантастика',
       'Šodien': 'Сегодня', 'Rīt': 'Завтра', 'Zāle': 'Зал', 'Zālē': 'в зале', 'vietas': 'места',
       'Vietas': 'Места', 'vieta': 'место', 'Visi': 'Все', 'filmas': 'фильмов', 'min': 'мин', 'h': 'ч',
-      'kārtotas': 'сортировка', 'nosaukums': 'название', 'augoši': 'по возрастанию',
+      'aizņemta': 'занят', 'kārtotas': 'сортировка', 'nosaukums': 'название', 'augoši': 'по возрастанию',
       'dilstoši': 'по убыванию', 'Nav': 'Нет', 'apstiprināta': 'подтверждена', 'atsauce': 'ссылка',
       'karte': 'карта', 'iegādāta': 'куплен', 'Pieslēgšanās': 'Вход', 'no': 'от', 'un': 'и',
       'Režisors': 'Режиссёр', 'Lomās': 'В ролях', 'Subtitri': 'Субтитры', 'Versija': 'Версия',
@@ -357,7 +357,7 @@ const I18N_LEX = {
       'Latviešu': 'Latvian', 'Zinātniskā fantastika': 'Science fiction',
       'Šodien': 'Today', 'Rīt': 'Tomorrow', 'Zāle': 'Hall', 'Zālē': 'in hall', 'vietas': 'seats',
       'Vietas': 'Seats', 'vieta': 'seat', 'Visi': 'All', 'filmas': 'films', 'min': 'min', 'h': 'h',
-      'kārtotas': 'sorted', 'nosaukums': 'title', 'augoši': 'ascending', 'dilstoši': 'descending',
+      'aizņemta': 'taken', 'kārtotas': 'sorted', 'nosaukums': 'title', 'augoši': 'ascending', 'dilstoši': 'descending',
       'Nav': 'None', 'apstiprināta': 'confirmed', 'atsauce': 'reference', 'karte': 'card',
       'iegādāta': 'bought', 'Pieslēgšanās': 'Sign-in', 'no': 'from', 'un': 'and',
       'Režisors': 'Director', 'Lomās': 'Cast', 'Subtitri': 'Subtitles', 'Versija': 'Version',
@@ -366,115 +366,125 @@ const I18N_LEX = {
   }
 };
 
-/* Frāžu likumi saliktiem teikumiem (dinamiski skaitļi, laiki, saraksti). */
+/* Frāžu likumi saliktiem teikumiem (dinamiski skaitļi, laiki, saraksti).
+   Likumi tiek apvilkti ar Unicode robežām, tāpēc \b šeit nav vajadzīgs. */
 const I18N_PHRASES = {
   ru: [
-    [/\bŠodien\b/g, 'Сегодня'], [/\bRīt\b/g, 'Завтра'],
-    [/\bRezervācija spēkā\b/g, 'Бронь действует'],
-    [/\bvienā pirkumā līdz\b/g, 'в одной покупке до'], [/\bvietām\b/g, 'мест'],
-    [/\bkad laiks beidzas, pasūtījums tiek anulēts un vietas atbrīvotas\b/g,
+    [/Šodien/g, 'Сегодня'], [/Rīt/g, 'Завтра'],
+    [/Rezervācija spēkā/g, 'Бронь действует'],
+    [/vienā pirkumā līdz/g, 'в одной покупке до'], [/vietām/g, 'мест'],
+    [/kad laiks beidzas, pasūtījums tiek anulēts un vietas atbrīvotas/g,
       'когда время истёк, заказ аннулируется, а места освобождаются'],
-    [/\bRezervācijas laiks beidzās\b/g, 'Время брони истекло'],
-    [/\bRezervācijas laiks ir beidzies\b/g, 'Время брони истекло'],
-    [/\bpasūtījums anulēts, izvēlētās vietas atbrīvotas citiem pircējiem\b/g,
+    [/Rezervācijas laiks beidzās/g, 'Время брони истекло'],
+    [/Rezervācijas laiks ir beidzies/g, 'Время брони истекло'],
+    [/pasūtījums anulēts, izvēlētās vietas atbrīvotas citiem pircējiem/g,
       'заказ аннулирован, выбранные места освобождены для других покупателей'],
-    [/\bvietas atbrīvotas citiem pircējiem\b/g, 'места освобождены для других покупателей'],
-    [/\bLūdzu, izvēlieties vietas no jauna\b/g, 'Пожалуйста, выберите места заново'],
-    [/\bVienā pirkumā var iegādāties ne vairāk kā\b/g, 'В одной покупке можно купить не более'],
-    [/\bSesija beigsies pēc\b/g, 'Сессия завершится через'],
-    [/\bpirkuma laikā laiks tiek atlikts\b/g, 'во время покупки время продлевается'],
-    [/\bCenu filtrs\b/g, 'Фильтр по цене'], [/\bredzami\b/g, 'показано'], [/\bseansiem\b/g, 'сеансов'],
-    [/\bNeviena filma neatbilst meklēšanai\b/g, 'Ни один фильм не соответствует поиску'],
-    [/\bNeviena filma neatbilst izvēlētajiem filtriem\b/g, 'Ни один фильм не соответствует фильтрам'],
-    [/\bfilmas · kārtotas\b/g, 'фильмов · сортировка'],
-    [/\bBiļete atcelta\. Atmaksāta summa\b/g, 'Билет отменён. Возвращено'],
-    [/\bAtceltas vietas\b/g, 'Отменены места'], [/\bAtmaksāts\b/g, 'Возвращено'],
-    [/\bDerīgās vietas\b/g, 'Действующие места'],
-    [/\bAtceltas visas vietas — biļete slēgta\. Atmaksāta summa\b/g,
+    [/vietas atbrīvotas citiem pircējiem/g, 'места освобождены для других покупателей'],
+    [/Lūdzu, izvēlieties vietas no jauna/g, 'Пожалуйста, выберите места заново'],
+    [/Vienā pirkumā var iegādāties ne vairāk kā/g, 'В одной покупке можно купить не более'],
+    [/Sesija beigsies pēc/g, 'Сессия завершится через'],
+    [/pirkuma laikā laiks tiek atlikts/g, 'во время покупки время продлевается'],
+    [/Cenu filtrs/g, 'Фильтр по цене'], [/redzami/g, 'показано'], [/seansiem/g, 'сеансов'],
+    [/Neviena filma neatbilst meklēšanai/g, 'Ни один фильм не соответствует поиску'],
+    [/Neviena filma neatbilst izvēlētajiem filtriem/g, 'Ни один фильм не соответствует фильтрам'],
+    [/filmas · kārtotas/g, 'фильмов · сортировка'],
+    [/Biļete atcelta\. Atmaksāta summa/g, 'Билет отменён. Возвращено'],
+    [/Atceltas visas vietas — biļete slēgta\. Atmaksāta summa/g,
       'Отменены все места — билет закрыт. Возвращено'],
-    [/\bPar atceltajām vietām atmaksāts\b/g, 'За отменённые места возвращено'],
-    [/\bAtzīmējiet vismaz vienu vietu, ko atcelt\b/g, 'Отметьте хотя бы одно место для отмены'],
-    [/\bAtlaide (procenti|fiksēta summa)?\b/g, 'Скидка'], [/\bir piemērota\b/g, 'применена'],
-    [/\bKods darbojas pasūtījumiem no\b/g, 'Код действует для заказов от'],
-    [/\bProcentu atlaide var būt no 1 līdz 50 %/g, 'Процентная скидка может быть от 1 до 50 %'],
-    [/\bKods «([^»]+)» netika pievienots\b/g, 'Код «$1» не добавлен'],
-    [/\bNorādiet filmu, datumu, laiku un cenu\b/g, 'Укажите фильм, дату, время и цену'],
-    [/\bNorādiet koda nosaukumu un atlaidi\b/g, 'Укажите название кода и размер скидки'],
-    [/\bFiksētā atlaide nevar būt negatīva\b/g, 'Фиксированная скидка не может быть отрицательной'],
-    [/\bZālē «([^»]+)» (.+) plkst\. (\d{2}:\d{2}) jau notiek filma «([^»]+)» \((\d{2}:\d{2})\)\. Divi seansi vienā zālē nevar pārklāties\./g,
+    [/Atceltas vietas/g, 'Отменены места'], [/Atmaksāts/g, 'Возвращено'],
+    [/Derīgās vietas/g, 'Действующие места'],
+    [/Par atceltajām vietām atmaksāts/g, 'За отменённые места возвращено'],
+    [/Atzīmējiet vismaz vienu vietu, ko atcelt/g, 'Отметьте хотя бы одно место для отмены'],
+    [/Sūtīt saiti uz e-pastu \(simulēts\)/g, 'Отправить ссылку на e-mail (симуляция)'],
+    [/Kods darbojas pasūtījumiem no/g, 'Код действует для заказов от'],
+    [/Procentu atlaide var būt no 1 līdz 50 %/g, 'Процентная скидка может быть от 1 до 50 %'],
+    [/Fiksētā atlaide nevar būt negatīva/g, 'Фиксированная скидка не может быть отрицательной'],
+    [/Norādiet filmu, datumu, laiku un cenu/g, 'Укажите фильм, дату, время и цену'],
+    [/Norādiet koda nosaukumu un atlaidi/g, 'Укажите название кода и размер скидки'],
+    [/Kods «([^»]+)» pievienots/g, 'Код «$1» добавлен'],
+    [/netika pievienots/g, 'не добавлен'], [/pievienots/g, 'добавлен'],
+    [/Aizņemtās zāles/g, 'Занятые залы'], [/nav izvēlamas/g, 'недоступны для выбора'],
+    [/plkst\.\s*/g, 'в '], [/(\d+) no (\d+)/g, '$1 из $2'],
+    [/Zālē «([^»]+)» (.+) plkst\. (\d{2}:\d{2}) jau notiek filma «([^»]+)» \((\d{2}:\d{2})\)\. Divi seansi vienā zālē nevar pārklāties\./g,
       'В зале «$1» $2 в $3 уже идёт фильм «$4» ($5). Два сеанса в одном зале не могут пересекаться.'],
-    [/\bSeanss atcelts — izvēlies risinājumu\b/g, 'Сеанс отменён — выбери решение'],
-    [/\bKinoteātris atcēla seansu\. Tev ir izvēle: pilna atmaksa vai cita biļete tajā pašā filmā\./g,
+    [/Seanss atcelts — izvēlies risinājumu/g, 'Сеанс отменён — выбери решение'],
+    [/Kinoteātris atcēla seansu\. Tev ir izvēle: pilna atmaksa vai cita biļete tajā pašā filmā\./g,
       'Кинотеатр отменил сеанс. У тебя есть выбор: полный возврат или другой билет на тот же фильм.'],
-    [/\bPieprasīt atmaksu\b/g, 'Запросить возврат'], [/\bCita biļete\b/g, 'Другой билет'],
-    [/\bIzvēlēties citu seansu\b/g, 'Выбрать другой сеанс'],
-    [/\bCits šīs filmas seanss šobrīd nav pieejams\./g, 'Другого сеанса этого фильма сейчас нет.'],
-    [/\bBiļete pārcelta\b/g, 'Билет перенесён'], [/\bAtmaksa apstiprināta\b/g, 'Возврат подтверждён'],
-    [/\bMaksājums apstiprināts uzreiz \(([^)]+)\)\./g, 'Платёж подтверждён сразу ($1).'],
-    [/\bJauna pagaidu parole: ([A-Z0-9-]+)\. Mācību vidē tā tiek parādīta uzreiz\./g,
+    [/Pieprasīt atmaksu/g, 'Запросить возврат'], [/Cita biļete/g, 'Другой билет'],
+    [/Izvēlēties citu seansu/g, 'Выбрать другой сеанс'],
+    [/Cits šīs filmas seanss šobrīd nav pieejams\./g, 'Другого сеанса этого фильма сейчас нет.'],
+    [/Biļete pārcelta/g, 'Билет перенесён'], [/Atmaksa apstiprināta/g, 'Возврат подтверждён'],
+    [/Maksājums apstiprināts uzreiz \(([^)]+)\)\./g, 'Платёж подтверждён сразу ($1).'],
+    [/Jauna pagaidu parole: ([A-Z0-9-]+)\. Mācību vidē tā tiek parādīta uzreiz\./g,
       'Новый временный пароль: $1. В учебной среде он показывается сразу.'],
-    [/\bMācību vide\b/g, 'Учебная среда'],
-    [/\bAktīvie seansi\b/g, 'Активные сеансы'], [/\bFilmas\b/g, 'Фильмы'],
-    [/\bLabot seansu\b/g, 'Изменить сеанс'],
-    [/\bAtvērta jauna seansa forma ar izvēlētu filmu\./g,
-      'Открыта форма нового сеанса с выбранным фильмом.'],
-    [/\bVersija\b/g, 'Версия'], [/\bOperators: pieslēgts\./g, 'Оператор: подключён.'],
-    [/\bSākuma stāvoklis\b/g, 'Исходное состояние'],
-    [/\bPievienota filma\b/g, 'Добавлен фильм'], [/\bPievienots atlaides kods\b/g, 'Добавлен код скидки'],
-    [/\bLabots seanss\b/g, 'Изменён сеанс'], [/\bIzveidots seanss\b/g, 'Создан сеанс'],
-    [/\bAtcelts seanss\b/g, 'Отменён сеанс'], [/\bOperators pieslēdzās\b/g, 'Оператор вошёл'],
-    [/\bAtiestatīti dati\b/g, 'Данные сброшены'], [/\bbez termiņa\b/g, 'без срока'],
-    [/\btermiņš\b/g, 'срок'], [/\bno\b/g, 'от'], [/\bVisi\b/g, 'Все']
+    [/Aktīvie seansi/g, 'Активные сеансы'], [/Labot seansu/g, 'Изменить сеанс'],
+    [/Atvērta jauna seansa forma ar izvēlētu filmu\./g, 'Открыта форма нового сеанса с выбранным фильмом.'],
+    [/Versija/g, 'Версия'], [/Operators: pieslēgts\./g, 'Оператор: подключён.'],
+    [/Sākuma stāvoklis/g, 'Исходное состояние'],
+    [/Pievienota filma/g, 'Добавлен фильм'], [/Pievienots atlaides kods/g, 'Добавлен код скидки'],
+    [/Labots seanss/g, 'Изменён сеанс'], [/Izveidots seanss/g, 'Создан сеанс'],
+    [/Atcelts seanss/g, 'Отменён сеанс'], [/Operators pieslēdzās/g, 'Оператор вошёл'],
+    [/Atiestatīti dati/g, 'Данные сброшены'], [/bez termiņa/g, 'без срока'],
+    [/termiņš/g, 'срок'], [/Atiestatīt/g, 'Сбросить'],
+    [/Programmu testēšana/g, 'Тестирование программ'],
+    [/dati paliek šajā pārlūkā/g, 'данные остаются в этом браузере'],
+    [/mācību vide/g, 'учебная среда']
   ],
   en: [
-    [/\bŠodien\b/g, 'Today'], [/\bRīt\b/g, 'Tomorrow'],
-    [/\bRezervācija spēkā\b/g, 'Booking valid'],
-    [/\bvienā pirkumā līdz\b/g, 'up to'], [/\bvietām\b/g, 'seats'],
-    [/\bkad laiks beidzas, pasūtījums tiek anulēts un vietas atbrīvotas\b/g,
+    [/Šodien/g, 'Today'], [/Rīt/g, 'Tomorrow'],
+    [/Rezervācija spēkā/g, 'Booking valid'],
+    [/vienā pirkumā līdz/g, 'up to'], [/vietām/g, 'seats'],
+    [/kad laiks beidzas, pasūtījums tiek anulēts un vietas atbrīvotas/g,
       'when time runs out the order is cancelled and the seats are released'],
-    [/\bRezervācijas laiks beidzās\b/g, 'The booking time has expired'],
-    [/\bRezervācijas laiks ir beidzies\b/g, 'The booking time has expired'],
-    [/\bLūdzu, izvēlieties vietas no jauna\b/g, 'Please choose seats again'],
-    [/\bVienā pirkumā var iegādāties ne vairāk kā\b/g, 'You can buy at most'],
-    [/\bSesija beigsies pēc\b/g, 'The session ends in'],
-    [/\bpirkuma laikā laiks tiek atlikts\b/g, 'time is extended during a purchase'],
-    [/\bCenu filtrs\b/g, 'Price filter'], [/\bredzami\b/g, 'shown'], [/\bseansiem\b/g, 'screenings'],
-    [/\bNeviena filma neatbilst meklēšanai\b/g, 'No film matches the search'],
-    [/\bNeviena filma neatbilst izvēlētajiem filtriem\b/g, 'No film matches the filters'],
-    [/\bfilmas · kārtotas\b/g, 'films · sorted'],
-    [/\bBiļete atcelta\. Atmaksāta summa\b/g, 'Ticket cancelled. Refunded'],
-    [/\bAtceltas vietas\b/g, 'Cancelled seats'], [/\bAtmaksāts\b/g, 'Refunded'],
-    [/\bDerīgās vietas\b/g, 'Valid seats'],
-    [/\bPar atceltajām vietām atmaksāts\b/g, 'Refunded for cancelled seats'],
-    [/\bAtzīmējiet vismaz vienu vietu, ko atcelt\b/g, 'Tick at least one seat to cancel'],
-    [/\bAtlaide\b/g, 'Discount'], [/\bir piemērota\b/g, 'applied'],
-    [/\bKods darbojas pasūtījumiem no\b/g, 'The code works for orders from'],
-    [/\bProcentu atlaide var būt no 1 līdz 50 %/g, 'A percentage discount can be 1–50%'],
-    [/\bKods «([^»]+)» netika pievienots\b/g, 'Code “$1” was not added'],
-    [/\bNorādiet filmu, datumu, laiku un cenu\b/g, 'Enter the film, date, time and price'],
-    [/\bNorādiet koda nosaukumu un atlaidi\b/g, 'Enter the code name and the discount'],
-    [/\bZālē «([^»]+)» (.+) plkst\. (\d{2}:\d{2}) jau notiek filma «([^»]+)» \((\d{2}:\d{2})\)\. Divi seansi vienā zālē nevar pārklāties\./g,
+    [/Rezervācijas laiks beidzās/g, 'The booking time has expired'],
+    [/Rezervācijas laiks ir beidzies/g, 'The booking time has expired'],
+    [/Lūdzu, izvēlieties vietas no jauna/g, 'Please choose seats again'],
+    [/Vienā pirkumā var iegādāties ne vairāk kā/g, 'You can buy at most'],
+    [/Sesija beigsies pēc/g, 'The session ends in'],
+    [/pirkuma laikā laiks tiek atlikts/g, 'time is extended during a purchase'],
+    [/Cenu filtrs/g, 'Price filter'], [/redzami/g, 'shown'], [/seansiem/g, 'screenings'],
+    [/Neviena filma neatbilst meklēšanai/g, 'No film matches the search'],
+    [/Neviena filma neatbilst izvēlētajiem filtriem/g, 'No film matches the filters'],
+    [/filmas · kārtotas/g, 'films · sorted'],
+    [/Biļete atcelta\. Atmaksāta summa/g, 'Ticket cancelled. Refunded'],
+    [/Atceltas vietas/g, 'Cancelled seats'], [/Atmaksāts/g, 'Refunded'],
+    [/Derīgās vietas/g, 'Valid seats'],
+    [/Par atceltajām vietām atmaksāts/g, 'Refunded for cancelled seats'],
+    [/Atzīmējiet vismaz vienu vietu, ko atcelt/g, 'Tick at least one seat to cancel'],
+    [/Sūtīt saiti uz e-pastu \(simulēts\)/g, 'Send the link by e-mail (simulated)'],
+    [/Kods darbojas pasūtījumiem no/g, 'The code works for orders from'],
+    [/Procentu atlaide var būt no 1 līdz 50 %/g, 'A percentage discount can be 1–50%'],
+    [/Fiksētā atlaide nevar būt negatīva/g, 'A fixed discount cannot be negative'],
+    [/Norādiet filmu, datumu, laiku un cenu/g, 'Enter the film, date, time and price'],
+    [/Norādiet koda nosaukumu un atlaidi/g, 'Enter the code name and the discount'],
+    [/Kods «([^»]+)» pievienots/g, 'Code “$1” added'],
+    [/netika pievienots/g, 'was not added'], [/pievienots/g, 'added'],
+    [/Aizņemtās zāles/g, 'Occupied halls'], [/nav izvēlamas/g, 'are not selectable'],
+    [/plkst\.\s*/g, 'at '], [/(\d+) no (\d+)/g, '$1 of $2'],
+    [/Zālē «([^»]+)» (.+) plkst\. (\d{2}:\d{2}) jau notiek filma «([^»]+)» \((\d{2}:\d{2})\)\. Divi seansi vienā zālē nevar pārklāties\./g,
       'In hall “$1” on $2 at $3 the film “$4” is already running ($5). Two screenings cannot overlap in one hall.'],
-    [/\bSeanss atcelts — izvēlies risinājumu\b/g, 'Screening cancelled — choose a solution'],
-    [/\bPieprasīt atmaksu\b/g, 'Request a refund'], [/\bCita biļete\b/g, 'Another ticket'],
-    [/\bIzvēlēties citu seansu\b/g, 'Choose another screening'],
-    [/\bCits šīs filmas seanss šobrīd nav pieejams\./g, 'No other screening of this film right now.'],
-    [/\bBiļete pārcelta\b/g, 'Ticket moved'], [/\bAtmaksa apstiprināta\b/g, 'Refund confirmed'],
-    [/\bJauna pagaidu parole: ([A-Z0-9-]+)\. Mācību vidē tā tiek parādīta uzreiz\./g,
+    [/Seanss atcelts — izvēlies risinājumu/g, 'Screening cancelled — choose a solution'],
+    [/Pieprasīt atmaksu/g, 'Request a refund'], [/Cita biļete/g, 'Another ticket'],
+    [/Izvēlēties citu seansu/g, 'Choose another screening'],
+    [/Cits šīs filmas seanss šobrīd nav pieejams\./g, 'No other screening of this film right now.'],
+    [/Biļete pārcelta/g, 'Ticket moved'], [/Atmaksa apstiprināta/g, 'Refund confirmed'],
+    [/Jauna pagaidu parole: ([A-Z0-9-]+)\. Mācību vidē tā tiek parādīta uzreiz\./g,
       'New temporary password: $1. In the training environment it is shown right away.'],
-    [/\bAktīvie seansi\b/g, 'Active screenings'], [/\bFilmas\b/g, 'Films'],
-    [/\bLabot seansu\b/g, 'Edit screening'],
-    [/\bAtvērta jauna seansa forma ar izvēlētu filmu\./g,
-      'The new screening form is open with a film selected.'],
-    [/\bVersija\b/g, 'Version'], [/\bOperators: pieslēgts\./g, 'Operator: signed in.'],
-    [/\bSākuma stāvoklis\b/g, 'Initial state'],
-    [/\bPievienota filma\b/g, 'Film added'], [/\bPievienots atlaides kods\b/g, 'Discount code added'],
-    [/\bLabots seanss\b/g, 'Screening edited'], [/\bIzveidots seanss\b/g, 'Screening created'],
-    [/\bAtcelts seanss\b/g, 'Screening cancelled'], [/\bOperators pieslēdzās\b/g, 'Operator signed in'],
-    [/\bAtiestatīti dati\b/g, 'Data reset'], [/\bbez termiņa\b/g, 'no expiry'],
-    [/\btermiņš\b/g, 'expiry'], [/\bno\b/g, 'from'], [/\bVisi\b/g, 'All']
+    [/Aktīvie seansi/g, 'Active screenings'], [/Labot seansu/g, 'Edit screening'],
+    [/Atvērta jauna seansa forma ar izvēlētu filmu\./g, 'The new screening form is open with a film selected.'],
+    [/Versija/g, 'Version'], [/Operators: pieslēgts\./g, 'Operator: signed in.'],
+    [/Sākuma stāvoklis/g, 'Initial state'],
+    [/Pievienota filma/g, 'Film added'], [/Pievienots atlaides kods/g, 'Discount code added'],
+    [/Labots seanss/g, 'Screening edited'], [/Izveidots seanss/g, 'Screening created'],
+    [/Atcelts seanss/g, 'Screening cancelled'], [/Operators pieslēdzās/g, 'Operator signed in'],
+    [/Atiestatīti dati/g, 'Data reset'], [/bez termiņa/g, 'no expiry'],
+    [/termiņš/g, 'expiry'], [/Atiestatīt/g, 'Reset'],
+    [/Programmu testēšana/g, 'Software testing'],
+    [/dati paliek šajā pārlūkā/g, 'data stays in this browser'],
+    [/mācību vide/g, 'training environment']
   ]
 };
+
 
 /* Leksika: vārdi, kas parādās saliktos teikumos (datumi, saraksti, žanri). */
 /* Границы слова считаем по Unicode: \b не видит латышские буквы (ā, ē, š…), поэтому
@@ -562,6 +572,34 @@ function restoreDrafts(d) {
     if (el && el.value === '') el.value = val;
   }
 }
+/* BUG-11: pārzīmē tikai zāļu sarakstu un padomu — bez pilnas lapas pārzīmēšanas,
+   citādi change notikums iekš render() sabojā DOM (nodaļa tiek pārvietota). */
+function refreshHallOptions(){
+  const sel=document.querySelector('#sc-hall');
+  if(!sel) return;
+  const edSc=view.editingScreening?screening(view.editingScreening):null;
+  const scr=view.scr||{};
+  const movieId=String(scr.movieId||view.screeningMovie||(edSc?edSc.movieId:''));
+  const dEl=document.querySelector('#sc-date'), tEl=document.querySelector('#sc-time');
+  const date=scr.date||(dEl?dEl.value:'')||(edSc?edSc.date:todayISO());
+  const time=scr.time||(tEl?tEl.value:'')||(edSc?edSc.time:'19:00');
+  let clashes=0;
+  [...sel.options].forEach(o=>{
+    const c=screeningConflict({movieId,date,time,hall:o.value},edSc?edSc.id:null);
+    o.disabled=!!c;
+    o.textContent=o.value+(c?` — aizņemta (${c.time})`:'');
+    if(c) clashes++;
+  });
+  if(sel.options[sel.selectedIndex]&&sel.options[sel.selectedIndex].disabled){
+    const free=[...sel.options].find(o=>!o.disabled);
+    if(free){sel.value=free.value;view.scr=Object.assign({},view.scr||{},{hall:free.value})}
+  }
+  const hint=document.querySelector('#hall-hint');
+  if(hint) hint.textContent=clashes
+    ? `Aizņemtās zāles ${dateLabel(date)} plkst. ${time} nav izvēlamas (${clashes} no ${Object.keys(state.halls).length}).`
+    : '';
+}
+
 function setLang(code) {
   const drafts = captureDrafts();
   const focus = document.activeElement && document.activeElement.id;
@@ -968,7 +1006,11 @@ function booking(){
   const s=screening(view.screeningId),m=movie(s.movieId),hall=state.halls[s.hall];
   const rows='ABCDEFG'.slice(0,hall.rows).split('');
   const inv=invSeats(s);   // US-16.07: invalīdu vietas ir atzīmētas atsevišķi
-  const seatRows=rows.map(r=>`<div class="seat-row" style="--seats:${hall.seats}"><span class="row-label">${r}</span>${Array.from({length:hall.seats},(_,i)=>{let n=`${r}${i+1}`,taken=reserved(s.id).includes(n),selected=view.seats.includes(n),wheel=inv.includes(n);return `<button class="seat ${taken?'taken':''} ${selected?'selected':''} ${wheel?'wheel':''}" data-seat="${n}" ${taken?'disabled':''}${wheel?' title="Invalīdu vieta"':''}>${i+1}</button>`}).join('')}</div>`).join('');
+  /* BUG-59: ratiņkrēsla vietas atzīmē gan klase, gan IEKĻAUTAIS stils un ♿ zīme — tā vieta
+   ir atpazīstama arī tad, ja pārlūkā ir palicis vecs styles.css no kešatmiņas. */
+const seatRows=rows.map(r=>`<div class="seat-row" style="--seats:${hall.seats}"><span class="row-label">${r}</span>${Array.from({length:hall.seats},(_,i)=>{let n=`${r}${i+1}`,taken=reserved(s.id).includes(n),selected=view.seats.includes(n),wheel=inv.includes(n);
+    const inline=wheel?` style="background:${selected?'#ff8d32':'#a9d3f0'};border:2px dashed ${selected?'#11131a':'#6fa8dc'};color:${selected?'#11131a':'#12283a'}"`:'';
+    return `<button class="seat ${taken?'taken':''} ${selected?'selected':''} ${wheel?'wheel':''}" data-seat="${n}" ${taken?'disabled':''}${wheel?' title="Invalīdu vieta '+n+'"':''}${inline}>${wheel?'♿':''}${i+1}</button>`}).join('')}</div>`).join('');
   const up=unitPrice(s,view.typeId);
   return `<section>${steps('booking')}<button class="subtle" data-movie="${m.id}">← ${m.title}</button><div class="booking-layout"><div>
   <p class="eyebrow">${m.title} · ${s.time} · ${s.hall} · ${dateLabel(s.date)}</p><h1 class="page-title">Izvēlies vietas.</h1>
@@ -1168,13 +1210,21 @@ function admin(){
   const editing=view.editingMovie;
   const edSc=view.editingScreening?screening(view.editingScreening):null;
   const preMovie=String(view.screeningMovie||(edSc?edSc.movieId:''));
+  /* BUG-11: formas vērtības (datums/laiks/zāle) — no tām atkarīgs, kuras zāles ir aizņemtas. */
+  const scr=view.scr||{};
+  const formMovie=String(scr.movieId||preMovie||'');
+  const formDate=scr.date||(edSc?edSc.date:isoDate(0));
+  const formTime=scr.time||(edSc?edSc.time:'19:00');
+  const formHall=scr.hall||(edSc?edSc.hall:'Zāle 1');
+  const hallClashes=Object.keys(state.halls).filter(h=>screeningConflict({movieId:formMovie,date:formDate,time:formTime,hall:h},edSc?edSc.id:null)).length;
   return `<section class="admin-layout"><div>
   <p class="eyebrow">Operatora panelis</p><h1 class="page-title">Mācību dati</h1><p class="lede">Izmaiņas uzreiz saglabājas šajā pārlūkā. Izmantojiet atiestatīšanu, lai atgrieztu sākuma variantu.</p>
   <div class="panel"><h2>Filmas (${state.movies.length})</h2><div class="admin-list">${movies}</div></div>
   <div class="panel"><h2>Aktīvie seansi (${state.screenings.length})</h2><div class="admin-list">${screenings}</div></div>
   <div class="panel"><h2>Atlaižu kodi</h2><div class="admin-list">${Object.entries(state.promos).map(([k])=>{const p=promoOf(k)||{kind:'percent',value:0,min:0,until:''};const val=p.kind==='eur'?`−${money(p.value)}`:`−${p.value}%`;return `<div class="admin-row"><span><strong>${k}</strong> · ${val}${p.min?` · no ${money(p.min)}`:''} · ${p.until?(promoExpired(k)?`termiņš ${p.until} (beidzies)`:`termiņš ${p.until}`):'bez termiņa'}</span></div>`}).join('')}</div>
   <div class="form-grid"><label>Jauns kods<input id="promo-code" placeholder="PIEMĒRAM, VASARA"></label><label>Veids<select id="promo-kind"><option value="percent">Procenti</option><option value="eur">Fiksēta summa €</option></select></label><label>Atlaide<input id="promo-value" type="number" min="1" max="50" value="15"></label><label>Minimālā summa €<input id="promo-min" type="number" min="0" step="0.5" value="0"></label><label>Termiņš, ja vajag<input id="promo-until" type="date"></label></div>
-  <div class="form-actions"><button class="button secondary" data-action="add-promo">Pievienot kodu</button></div></div>
+  <div class="form-actions"><button class="button secondary" data-action="add-promo">Pievienot kodu</button></div>
+  ${view.promoMsg?notice(view.promoMsg,view.promoMsgType||'success'):''}</div>
   <div class="panel"><h2>Audita žurnāls</h2><div class="admin-list">${state.audit.length?state.audit.slice().reverse().map(a=>`<div class="admin-row"><span class="meta">${a.ts} · <strong>${a.action}</strong> · ${a.detail}</span></div>`).join(''):'<p class="meta">Ierakstu vēl nav.</p>'}</div></div>
   </div>
   <aside><div class="panel"><h2>${editing?'Labot filmu':'Pievienot filmu'}</h2>
@@ -1187,10 +1237,11 @@ function admin(){
   <div class="form-actions"><button class="button" data-action="${editing?'save-movie':'add-movie'}">${editing?'Saglabāt':'Pievienot'}</button>${editing?'<button class="button secondary" data-action="cancel-edit">Atcelt</button>':''}</div></div>
   <div class="panel"><h2>${edSc?`Labot seansu #${edSc.id}`:'Jauns seanss'}</h2>
   <div class="form-grid"><label>Filma<select id="sc-movie">${state.movies.map(m=>`<option value="${m.id}"${preMovie===String(m.id)?' selected':''}>${m.title}</option>`).join('')}</select></label>
-  <label>Datums<input id="sc-date" type="date" value="${edSc?edSc.date:isoDate(0)}"></label>
-  <label>Laiks<input id="sc-time" type="time" value="${edSc?edSc.time:'19:00'}"></label>
-  <label>Zāle<select id="sc-hall">${Object.keys(state.halls).map(h=>`<option${edSc&&edSc.hall===h?' selected':''}>${h}</option>`).join('')}</select></label>
+  <label>Datums<input id="sc-date" type="date" value="${formDate}"></label>
+  <label>Laiks<input id="sc-time" type="time" value="${formTime}"></label>
+  <label>Zāle<select id="sc-hall">${Object.keys(state.halls).map(h=>{const clash=screeningConflict({movieId:formMovie,date:formDate,time:formTime,hall:h},edSc?edSc.id:null);return `<option value="${h}"${formHall===h?' selected':''} ${clash?'disabled':''}>${h}${clash?` — aizņemta (${clash.time})`:''}</option>`}).join('')}</select></label>
   <label>Cena €<input id="sc-price" type="number" min="1" step="0.5" value="${edSc?edSc.price:8.5}"></label></div>
+  <p class="meta" id="hall-hint">${hallClashes?`Aizņemtās zāles ${dateLabel(formDate)} plkst. ${formTime} nav izvēlamas (${hallClashes} no ${Object.keys(state.halls).length}).`:''}</p>
   <div class="form-actions"><button class="button" data-action="${edSc?'save-screening':'add-screening'}">${edSc?'Saglabāt seansu':'Izveidot seansu'}</button>${edSc?'<button class="button secondary" data-action="cancel-screening-edit">Atcelt labošanu</button>':''}</div>${view.notice?notice(view.notice):''}</div>
   <div class="panel"><h2>Mācību vide</h2><p class="meta">Versija ${VERSION}. Operators: ${state.operator?'pieslēgts':'—'}.</p>
   <div class="form-actions"><button class="button secondary" data-action="op-logout">Iziet</button><button class="button danger" data-action="reset">Atiestatīt visus datus</button></div></div></aside></section>`
@@ -1417,11 +1468,11 @@ document.addEventListener('click',e=>{
   }
   /* US-15.06: seansa maiņa un strādājoša poga seansa rindā. */
   if(b.dataset.action==='new-screening'){
-    view.screeningMovie=Number(b.dataset.id);view.editingScreening=null;
+    view.screeningMovie=Number(b.dataset.id);view.editingScreening=null;view.scr=null;
     view.notice='Atvērta jauna seansa forma ar izvēlētu filmu.';return render();
   }
   if(b.dataset.action==='edit-screening'){
-    view.editingScreening=Number(b.dataset.id);view.screeningMovie=null;view.notice=null;return render();
+    view.editingScreening=Number(b.dataset.id);view.screeningMovie=null;view.scr=null;view.notice=null;return render();
   }
   if(b.dataset.action==='cancel-screening-edit'){view.editingScreening=null;view.notice=null;return render()}
   if(b.dataset.action==='add-screening'||b.dataset.action==='save-screening'){
@@ -1469,14 +1520,20 @@ document.addEventListener('click',e=>{
           min=minEl?(Number(minEl.value)||0):0,
           untilInput=document.querySelector('#promo-until'),
           until=untilInput?untilInput.value:'';
-    if(!code||!val){view.notice='Norādiet koda nosaukumu un atlaidi.';return render()}
+    if(!code||!val){view.promoMsg='Norādiet koda nosaukumu un atlaidi.';view.promoMsgType='error';return render()}
     /* BUG-12 / BUG-13 (US-07.03): maksimālā atlaide ir 50 % — lielāku kodu sistēma nepieņem. */
     if(kind==='percent'&&(val<1||val>50)){
-      view.notice=`Procentu atlaide var būt no 1 līdz 50 %. Kods «${code}» netika pievienots.`;
+      view.promoMsg=`Procentu atlaide var būt no 1 līdz 50 %. Kods «${code}» netika pievienots.`;
+      view.promoMsgType='error';toast(view.promoMsg);
       return render();
     }
-    if(kind==='eur'&&val<0){view.notice='Fiksētā atlaide nevar būt negatīva.';return render()}
+    if(kind==='eur'&&val<0){
+      view.promoMsg='Fiksētā atlaide nevar būt negatīva.';view.promoMsgType='error';toast(view.promoMsg);
+      return render();
+    }
     state.promos[code]={kind,value:val,min,until};
+    view.promoMsg=`Kods «${code}» pievienots: ${kind==='eur'?`−${money(val)}`:`−${val}%`}${min?` · no ${money(min)}`:''}${until?` · termiņš ${until}`:''}.`;
+    view.promoMsgType='success';toast(view.promoMsg);
     audit('Pievienots atlaides kods',`${code} · ${kind==='eur'?`−${money(val)}`:`−${val}%`}${min?` · no ${money(min)}`:''}${until?` · termiņš ${until}`:''}`);
     save();view.notice='Atlaides kods pievienots.';return render();
   }
@@ -1500,6 +1557,12 @@ document.addEventListener('input',e=>{
 });
 document.addEventListener('change',e=>{
   if(e.target.id==='lang'){setLang(e.target.value);return}
+  if(['sc-movie','sc-date','sc-time','sc-hall','sc-price'].includes(e.target.id)){
+    const key=e.target.id.slice(3), map={movie:'movieId',date:'date',time:'time',hall:'hall',price:'price'};
+    view.scr=Object.assign({},view.scr||{},{[map[key]]:e.target.value});
+    refreshHallOptions();
+    return;
+  }
   if(e.target.id==='ticket-type'){view.typeId=e.target.value;return render()}
   /* US-16.02: kārtošana saglabājas; US-16.04 un US-16.05: filtri. */
   if(e.target.id==='sort-crit'){setPref('sort',e.target.value);return render()}

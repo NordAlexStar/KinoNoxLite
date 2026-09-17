@@ -2,7 +2,7 @@
 
 Statiskā PB7 mācību lietotne. Atveriet `index.html` pārlūkā: nav vajadzīgs .NET, datubāze, internets vai serveris. Vietējā mapē `assets/` atrodas kino zāles un filmu plakātu attēli.
 
-**Versija 0.7.0**
+**Versija 0.7.1**
 
 ## Kas ir lokāls
 
@@ -64,6 +64,7 @@ Lietotne ir paredzēta prasību analīzei, backlog darbam, pieņemšanas kritēr
 ## Versiju vēsture
 
 - **0.4.0** — septiņi biļešu veidi, tostarp ģimenes un VIP (US-06.01 / US-15.04); tukša atlaižu koda lauka paziņojums (US-07.02 / US-15.05); atlaižu koda termiņš operatora panelī (US-07.03 / US-15.11); seansa labošana un strādājoša poga seansa rindā (US-11.01 / US-15.06); biļetes atcelšana ar saiti no e-pasta (US-10.03 / US-15.07); pircēja izvēle pēc kinoteātra atceltā seansa (US-10.04 / US-15.08); kopīgs vietu stāvoklis starp pārlūka cilnēm (US-05.03 / US-15.09); sesijas noildze ar pirkuma aizsardzību (US-13.02 / US-15.10).
+- **0.7.1** — atgrieztie klases defekti: aizņemtās zāles operatora formā nav izvēlamas (BUG-11), paziņojums par atlaides kodu redzams tieši «Atlaižu kodu» blokā un kā paziņojums (BUG-12, BUG-13), ratiņkrēsla vieta atzīmēta ar ♿ un iekļauto stilu, tāpēc redzama arī ar vecu CSS kešatmiņā (BUG-59).
 - **0.7.0** — saskarnes valodas maiņa (LV / RU / EN) galvenē, jebkurā lapā: US-15.01, US-15.02. Valodas izvēle saglabājas pārlūkā, un ievadītie dati (e-pasts, kartes lauki, atlaides kods, meklēšana, operatora formas) valodas maiņas laikā nepazūd.
 - **0.6.2** — rezervācijas laiks (10 min) tagad darbojas arī grozā un maksājuma lapā: taimeris redzams, un pēc 00:00 pasūtījums tiek anulēts (BUG-17, US-05.02).
 - **0.6.1** — leģenda norāda, kuras tieši vietas zālē ir paredzētas ratiņkrēslam («Invalīdu vieta: E1»); bez tā bija jāuzmin pēc krāsas (BUG-59).
