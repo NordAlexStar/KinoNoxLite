@@ -2,7 +2,7 @@
 
 Statiskā PB7 mācību lietotne. Atveriet `index.html` pārlūkā: nav vajadzīgs .NET, datubāze, internets vai serveris. Vietējā mapē `assets/` atrodas kino zāles un filmu plakātu attēli.
 
-**Versija 0.7.8**
+**Versija 0.7.9**
 
 ## Kas ir lokāls
 
@@ -23,6 +23,8 @@ Statiskā PB7 mācību lietotne. Atveriet `index.html` pārlūkā: nav vajadzīg
 - biļetes atcelšana (ne vēlāk kā 24 h pirms seansa) un naudas atmaksa;
 - **0.7.3 — komisija par atcelšanu 30 %** (US-KN26-87): pircēja atcelšanā tiek ieturēta komisija 30 % no atcelto vietu cenas, atlikusī summa tiek atmaksāta; komisija redzama biļetē un paziņojumā, atsevišķi par daļēju atcelšanu. Ja seansu atcēla kinoteātris, komisijas nav — paliek pilna atmaksa;
 - **biļetes atcelšana ar saiti no (simulētā) e-pasta**: biļetē ir poga, kas parāda saiti ar biļetes tokenu;
+- **0.7.9 — ātrā reģistrācija** (US-KN26-65): poga «Ātri: tikai e-pasts un parole» izveido kontu bez
+  personas datiem, kamēr pilnā reģistrācija (US-KN26-14) joprojām pieprasa visus laukus;
 - **0.7.7 — datu pārnese starp pārlūkiem BEZ servera**: profilā «Eksportēt datus (fails)» saglabā `.json`,
   citā pārlūkā «Importēt datus no faila» to ielādē — konti, paroles un pasūtījumi pārceļas, tad pieslēdzas
   ar savu e-pastu. Nekāds Python un serveris nav vajadzīgs;

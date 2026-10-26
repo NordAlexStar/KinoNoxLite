@@ -106,7 +106,7 @@
   <div id="toast" role="status" aria-live="polite"></div>
   <script>
 const KEY = 'kino-nox-lite-v1';
-const VERSION = '0.7.8';
+const VERSION = '0.7.9';
 const VAT = 0.21;
 const MAX_SEATS = 8;
 /* 0.7.3 (US-KN26-87): komisija par biļetes atcelšanu — 30 % no atcelto vietu cenas. */
@@ -434,6 +434,7 @@ const I18N_PHRASES = {
     [/Pārdotas biļetes/g, 'Продано билетов'],
     [/Drukāt \/ saglabāt PDF/g, 'Печать / сохранить PDF'],
     [/Eksportēt datus \(fails\)/g, 'Экспортировать данные (файл)'],
+    [/Ātri: tikai e-pasts un parole/g, 'Быстро: только e-mail и пароль'],
     [/Importēt datus no faila/g, 'Импортировать данные из файла'],
     [/Dati importēti\. Tagad pieslēdzies ar savu e-pastu un paroli\./g,
       'Данные импортированы. Теперь войди своим e-mail и паролем.'],
@@ -508,6 +509,7 @@ const I18N_PHRASES = {
     [/Pārdotas biļetes/g, 'Tickets sold'],
     [/Drukāt \/ saglabāt PDF/g, 'Print / save as PDF'],
     [/Eksportēt datus \(fails\)/g, 'Export data (file)'],
+    [/Ātri: tikai e-pasts un parole/g, 'Quick: e-mail and password only'],
     [/Importēt datus no faila/g, 'Import data from file'],
     [/Dati importēti\. Tagad pieslēdzies ar savu e-pastu un paroli\./g,
       'Data imported. Now sign in with your e-mail and password.'],
@@ -1330,7 +1332,7 @@ function profile(){
   <label>Dzimšanas datums<input id="profile-birth" type="date"></label>
   <label>Mācību parole<input id="profile-password" type="password" placeholder="Vismaz 8 rakstzīmes"></label></div>
   <p class="meta">Parolei jābūt vismaz 8 rakstzīmes, ar lielo un mazo burtu, ciparu un speciālo rakstzīmi.</p>
-  <div class="form-actions"><button class="button" data-action="register">Izveidot kontu</button></div>
+  <div class="form-actions"><button class="button" data-action="register">Izveidot kontu</button><button class="button secondary" data-action="register-fast">Ātri: tikai e-pasts un parole</button></div>
   <h2>Pieslēgšanās</h2>
   <div class="form-grid"><label>E-pasts<input id="login-email" type="email" placeholder="vards@example.com" list="known-users"></label>
   <label>Mācību parole<input id="login-password" type="password" placeholder="Tava parole"></label></div>
@@ -1576,9 +1578,12 @@ document.addEventListener('click',e=>{
   if(b.dataset.action==='close-email'){view.emailOpen=false;return render()}
   if(b.dataset.order){const o=state.orders.find(x=>x.id===b.dataset.order);view={...view,screen:'ticket',order:o,notice:null};return render()}
   if(b.dataset.action==='forgot'){view.passwordView='TEMP-'+Math.random().toString(36).slice(2,6).toUpperCase();return render()}
-  if(b.dataset.action==='register'||b.dataset.action==='login'){
+  if(b.dataset.action==='register'||b.dataset.action==='register-fast'||b.dataset.action==='login'){
     /* 0.7.2 (US-KN26-14): reģistrācijā tiek norādīti personas dati; pieslēgšanās paliek e-pasts + parole. */
-    const reg=b.dataset.action==='register';
+    /* 0.7.9 (US-KN26-65): ātrā reģistrācija — tikai e-pasts un parole, bez personas datiem.
+       Pilnā reģistrācija (US-KN26-14) joprojām pieprasa visus laukus. */
+    const reg=b.dataset.action==='register'||b.dataset.action==='register-fast';
+    const needFields=b.dataset.action==='register';
     const fld=id=>{const el=document.querySelector(id);return el?el.value.trim():''};
     const email=fld(reg?'#profile-email':'#login-email');
     const passEl=document.querySelector(reg?'#profile-password':'#login-password');
@@ -1586,7 +1591,7 @@ document.addEventListener('click',e=>{
     if(!/^\S+@\S+\.\S+$/.test(email)){view.notice='Ievadiet derīgu e-pasta adresi.';return render()}
     if(pass.length<8||!/[A-ZĀČĒĢĪĶĻŅŠŪŽ]/.test(pass)||!/[a-zāčēģīķļņšūž]/.test(pass)||!/\d/.test(pass)||!/[^\w\s]/.test(pass)){view.notice='Parolei jābūt vismaz 8 rakstzīmes ar lielo un mazo burtu, ciparu un speciālo rakstzīmi.';return render()}
     let person=null;
-    if(reg){
+    if(needFields){
       person={name:fld('#profile-name'),surname:fld('#profile-surname'),code:fld('#profile-code').replace(/\s+/g,''),
               phone:fld('#profile-phone'),address:fld('#profile-address'),birth:fld('#profile-birth')};
       if(!person.name||!person.surname||!person.code||!person.phone||!person.address||!person.birth){
