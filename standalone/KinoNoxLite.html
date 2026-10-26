@@ -106,7 +106,7 @@
   <div id="toast" role="status" aria-live="polite"></div>
   <script>
 const KEY = 'kino-nox-lite-v1';
-const VERSION = '0.7.11';
+const VERSION = '0.7.12';
 const VAT = 0.21;
 const MAX_SEATS = 8;
 /* 0.7.3 (US-KN26-87): komisija par biļetes atcelšanu — 30 % no atcelto vietu cenas. */
@@ -1278,6 +1278,9 @@ function ticket(){
   <div class="form-grid">${o.seats.map(n=>`<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" class="cancel-seat" value="${n}" ${(view.cancelSeats||[]).includes(n)?'checked':''}> Vieta ${n} · ${money(o.unit)}</label>`).join('')}</div>
   <div class="form-actions"><button class="button danger" data-action="cancel-seats" data-id="${o.id}">Atcelt atzīmētās vietas</button></div></div>`:''}
   ${cancellable?`<p class="meta">Atceļot biļeti, tiek ieturēta komisija ${Math.round(CANCEL_FEE*100)} % no atcelto vietu cenas; atlikusī summa tiek atmaksāta.</p>`:''}
+  ${/* KN26-BUG-10: kad atcelšanas logs ir aizvērts, sistēma to PASKAIDRO — agrāk poga vienkārši
+       pazuda, un cilvēks (arī testētājs) nevarēja atšķirt noteikumu no salauztas funkcijas. */''}
+  ${s&&!o.cancelled&&!cancellable&&left<24*60*60*1000?`<p class="meta" id="cancel-closed">Atcelt biļeti vairs nevar: līdz seansam palicis mazāk par 24 h (biļetes noteikumi). Ja seanss tiek atcelts, sazinies ar kasi.</p>`:''}
   <div class="form-actions">${cancellable?`<button class="button danger" data-action="cancel-order" data-id="${o.id}">Atcelt biļeti</button>`:''}
   <button class="button secondary" data-action="print">Drukāt / saglabāt PDF</button>
   <button class="button secondary" data-action="send-link" data-id="${o.id}">Sūtīt saiti uz e-pastu (simulēts)</button>
