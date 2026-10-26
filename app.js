@@ -1,5 +1,5 @@
 const KEY = 'kino-nox-lite-v1';
-const VERSION = '0.7.10';
+const VERSION = '0.7.11';
 const VAT = 0.21;
 const MAX_SEATS = 8;
 /* 0.7.3 (US-KN26-87): komisija par biļetes atcelšanu — 30 % no atcelto vietu cenas. */
@@ -1038,7 +1038,7 @@ const seatRows=rows.map(r=>`<div class="seat-row" style="--seats:${hall.seats}">
   const up=unitPrice(s,view.typeId);
   return `<section>${steps('booking')}<button class="subtle" data-movie="${m.id}">← ${m.title}</button><div class="booking-layout"><div>
   <p class="eyebrow">${m.title} · ${s.time} · ${s.hall} · ${dateLabel(s.date)}</p><h1 class="page-title">Izvēlies vietas.</h1>
-  <p class="meta">Rezervācija spēkā: <span class="timer" id="hold">${view.holdEnd?holdLabel(view.holdEnd-Date.now()):'10:00'}</span> · vienā pirkumā līdz ${MAX_SEATS} vietām</p>
+  <p class="meta">Rezervācija spēkā: <span class="timer" id="hold">${view.seats.length?(view.holdEnd?holdLabel(view.holdEnd-Date.now()):'10:00'):'—'}</span> · vienā pirkumā līdz ${MAX_SEATS} vietām</p>
   <div class="screen">EKRĀNS</div><div class="seat-map">${seatRows}</div>
   <div class="legend"><span><i></i>Brīva</span><span><i class="taken"></i>Aizņemta</span><span><i class="selected"></i>Izvēlēta</span><span><i class="wheel"></i>Invalīdu vieta${inv.length?`: ${inv.join(', ')}`:' šajā zālē nav'}</span></div></div>
   <aside class="panel"><h2>Pasūtījums</h2>
@@ -1341,7 +1341,11 @@ function render(){
   app.innerHTML=html;updateCart();applyLang(document.body);
   const langSel=document.querySelector('#lang');if(langSel)langSel.value=state.lang||'lv';
   if(lastScreen!==view.screen){window.scrollTo({top:0,behavior:'smooth'});lastScreen=view.screen}
-  if(view.screen==='booking'||view.screen==='cart') startHold(); else stopHold();
+  /* KN26-BUG-01 (US-KN26-37): rezervācija sākas līdz ar pirmās vietas izvēli, nevis ar lapas
+     atvēršanu. Agrāk taimeris skaitīja no 10:00 jau tukšā vietu lapā, un cilvēks, kurš vietas
+     izvēlējās ilgāk par 10 minūtēm, maksājumā saņēma «Rezervācijas laiks ir beidzies». */
+  const holding=view.screen==='cart'||(view.screen==='booking'&&view.seats.length>0);
+  if(holding) startHold(); else {stopHold();if(view.screen!=='cart')view.holdEnd=null}
 }
 
 function addCart(){
