@@ -106,7 +106,7 @@
   <div id="toast" role="status" aria-live="polite"></div>
   <script>
 const KEY = 'kino-nox-lite-v1';
-const VERSION = '0.7.5';
+const VERSION = '0.7.6';
 const VAT = 0.21;
 const MAX_SEATS = 8;
 /* 0.7.3 (US-KN26-87): komisija par biļetes atcelšanu — 30 % no atcelto vietu cenas. */
@@ -856,7 +856,7 @@ function load(){
    pirms `const store`, izņēmums tika norīts, un lietotne vienmēr sāka no sākuma stāvokļa, ignorējot
    saglabātos datus. */
 let state = load();
-function save(){lsSet(KEY,JSON.stringify(state));updateCart()}
+function save(){lsSet(KEY,JSON.stringify(state));updateCart();pushServer()}
 function money(n){return new Intl.NumberFormat('lv-LV',{style:'currency',currency:'EUR'}).format(n)}
 function nowLabel(){return new Intl.DateTimeFormat('lv-LV',{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'}).format(new Date())}
 function dateLabel(iso){
@@ -977,7 +977,50 @@ function sessionTick(){
    Īsta servera mācību vidē nav, tāpēc pircēja vietu stāvoklis tiek pārlasīts no glabātavas
    pirms pirkuma apstiprināšanas, un citu cilņu izmaiņas ienāk ar storage notikumu. Tā divu
    pircēju scenāriju var izpildīt divās vienas pārlūka cilnēs. */
-function storedState(){try{return JSON.parse(lsGet(KEY))||{}}catch{return {}}}
+function storedState(){if(SERVER&&SERVER_STATE)return SERVER_STATE;try{return JSON.parse(lsGet(KEY))||{}}catch{return {}}}
+
+/* ---------- Servera režīms (0.7.6) ----------
+   Ja lapa atvērta caur HTTP (server/kino-server.py), konti, pasūtījumi un vietas dzīvo servera JSON failā,
+   tāpēc pieslēgšanās strādā no JEBKURA pārlūka — tā ir «servera imitācija» mācību videi.
+   File:// režīms paliek kā līdz šim: viss lokāli pārlūkā, bez servera. */
+let SERVER = false, SERVER_STATE = null, serverSaveTimer = null;
+function serverFetch(path, opts){
+  return fetch(path, Object.assign({headers: {'Content-Type': 'application/json'}}, opts || {}));
+}
+function pushServer(){
+  if(!SERVER) return;
+  clearTimeout(serverSaveTimer);
+  serverSaveTimer = setTimeout(function(){
+    /* Kas pieder KONKRĒTAM pārlūkam (kas pieslēdzies, sesija, valoda, skata izvēles), uz serveri neiet. */
+    const local = {profile: 1, session: 1, prefs: 1, lang: 1};
+    const payload = {};
+    for (const k of Object.keys(state)) if (!local[k]) payload[k] = state[k];
+    serverFetch('api/state', {method: 'POST', body: JSON.stringify(payload)}).catch(function(){});
+  }, 120);
+}
+function pullServer(){
+  if(!SERVER) return;
+  serverFetch('api/state').then(r=>r.ok?r.json():null).then(function(d){
+    if(!d || typeof d!=='object') return;
+    SERVER_STATE = d;
+    if(Array.isArray(d.users)) state.users = d.users;
+    if(Array.isArray(d.orders)) state.orders = d.orders;
+    state.reserved = Object.assign({}, state.reserved, d.reserved || {});
+    const ae = document.activeElement;
+    if(ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;   // cilvēks raksta — nepārzīmējam
+    render();
+  }).catch(function(){});
+}
+function bootServer(){
+  if(!/^https?:$/.test(location.protocol)) return;   // file:// — paliek lokālais režīms
+  serverFetch('api/state').then(r=>r.ok?r.json():null).then(function(d){
+    if(!d || typeof d!=='object') return;
+    SERVER = true; SERVER_STATE = d;
+    state = Object.assign(clone(seed), d);
+    render();
+    setInterval(pullServer, 3000);
+  }).catch(function(){});
+}
 function refreshReserved(screeningId){
   const srv=(storedState().reserved||{})[screeningId]||[];
   const merged=[...new Set([...reserved(screeningId),...srv])];
@@ -1694,13 +1737,22 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&view.trailer){view.
    procentus; pārrakstām abus uzreiz pēc palaišanas. */
 if(needsMigration){needsMigration=false;save()}
 /* US-15.07: saite no (simulētā) e-pasta — #atcelt=<token> atver atcelšanas ekrānu. */
-const linkMatch=/#atcelt=([A-Za-z0-9]+)/.exec(location.hash||'');
-if(linkMatch){view.screen='link';view.cancelToken=linkMatch[1]}
+/* 0.7.6: saite no e-pasta atver ekrānu ARĪ tad, ja lapa jau atvērta — hashchange, nevis tikai svaiga
+   ielāde. Bez tā klikšķis uz saites biļetē neko nedarīja un izskatījās kā salauzta saite. */
+function openLinkFromHash(){
+  const m=/#atcelt=([A-Za-z0-9]+)/.exec(location.hash||'');
+  if(!m) return false;
+  view.screen='link';view.cancelToken=m[1];view.notice=null;view.emailOpen=false;render();return true;
+}
+window.addEventListener('hashchange',function(){if(!openLinkFromHash())nav('catalog')});
+openLinkFromHash();
 render();
 /* US-13.02: sesijas pulkstenis. US-05.03: citu cilņu izmaiņas (servera emulācija). */
 setInterval(sessionTick,1000);
 if(store.ok)window.addEventListener('storage',e=>{if(e.key===KEY)onStoreChanged()});
 sessionTick();
+/* 0.7.6: ja lapa atvērta caur HTTP — pārslēdzamies uz servera režīmu (konti un pasūtījumi kopīgi). */
+bootServer();
 
 </script>
 </body>

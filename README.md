@@ -2,7 +2,7 @@
 
 Statiskā PB7 mācību lietotne. Atveriet `index.html` pārlūkā: nav vajadzīgs .NET, datubāze, internets vai serveris. Vietējā mapē `assets/` atrodas kino zāles un filmu plakātu attēli.
 
-**Versija 0.7.5**
+**Versija 0.7.6**
 
 ## Kas ir lokāls
 
@@ -23,6 +23,11 @@ Statiskā PB7 mācību lietotne. Atveriet `index.html` pārlūkā: nav vajadzīg
 - biļetes atcelšana (ne vēlāk kā 24 h pirms seansa) un naudas atmaksa;
 - **0.7.3 — komisija par atcelšanu 30 %** (US-KN26-87): pircēja atcelšanā tiek ieturēta komisija 30 % no atcelto vietu cenas, atlikusī summa tiek atmaksāta; komisija redzama biļetē un paziņojumā, atsevišķi par daļēju atcelšanu. Ja seansu atcēla kinoteātris, komisijas nav — paliek pilna atmaksa;
 - **biļetes atcelšana ar saiti no (simulētā) e-pasta**: biļetē ir poga, kas parāda saiti ar biļetes tokenu;
+- **0.7.6 — servera režīms (nav obligāts)**: palaists `python3 server/kino-server.py`, lapa atveras caur
+  `http://127.0.0.1:8765` — konti, paroles, pasūtījumi un vietas glabājas vienā JSON failā, tāpēc
+  pieslēgšanās un biļete strādā no JEBKURA pārlūka tajā pašā datorā (īsta «servera imitācija»);
+  kas pieslēdzies un kāda valoda — paliek katram pārlūkam atsevišķi. `file://` režīms nemainās.
+- 0.7.6: saite no e-pasta atveras arī tad, ja lapa jau atvērta (hashchange) — agrāk klikšķis neko nedarīja;
 - **0.7.5 — saite no e-pasta rāda PAŠU biļeti** (US-KN26-76): filma, seanss, vietas, cena, QR kods un poga «Drukāt / saglabāt PDF»; atcelšana un komisijas paskaidrojums paliek tajā pašā lapā;
 - ja seansu atceļ kinoteātris, pircējam ir **izvēle**: pieprasīt atmaksu vai saņemt citu biļeti tajā pašā filmā;
 - operatora panelis ar pieslēgšanos: filmu pievienošana, labošana, dzēšana, seansu izveide, **labošana** un atcelšana, atlaižu kodu pārvaldība (ar termiņu), audita žurnāls;

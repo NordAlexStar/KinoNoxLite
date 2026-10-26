@@ -1,2 +1,6 @@
-# Lokālie demonstrācijas ekrānuzņēmumi
-screenshots/
+1|# Lokālie demonstrācijas ekrānuzņēmumi
+2|screenshots/
+
+# Servera režīma stāvoklis (mācību dati, nav jāpublicē)
+server/data.json
+server/data.json.tmp
