@@ -1,7 +1,9 @@
 const KEY = 'kino-nox-lite-v1';
-const VERSION = '0.7.2';
+const VERSION = '0.7.3';
 const VAT = 0.21;
 const MAX_SEATS = 8;
+/* 0.7.3 (US-KN26-87): komisija par biļetes atcelšanu — 30 % no atcelto vietu cenas. */
+const CANCEL_FEE = 0.3;
 const OPERATOR_PASSWORD = 'op2026';
 /* Maksājums tiek apstrādāts uzreiz: simulētā pakalpojuma atbilde (US-08.01). */
 const PAY_DELAY = 900;
@@ -317,6 +319,14 @@ const I18N_PHRASES = {
     [/Neviena filma neatbilst izvēlētajiem filtriem/g, 'Ни один фильм не соответствует фильтрам'],
     [/filmas · kārtotas/g, 'фильмов · сортировка'],
     [/Biļete atcelta\. Atmaksāta summa/g, 'Билет отменён. Возвращено'],
+    [/Biļete atcelta\./g, 'Билет отменён.'],
+    [/Atmaksāta summa/g, 'Сумма возврата'],
+    [/Biļete jau atcelta\. Atmaksāta summa/g, 'Билет уже отменён. Сумма возврата'],
+    [/Biļete jau atcelta\./g, 'Билет уже отменён.'],
+    [/Ieturēta komisija/g, 'Удержана комиссия'],
+    [/Atceļot biļeti, tiek ieturēta komisija/g, 'При отмене билета удерживается комиссия'],
+    [/no atcelto vietu cenas; atlikusī summa tiek atmaksāta/g,
+      'от цены отменённых мест; остаток возвращается'],
     [/Atceltas visas vietas — biļete slēgta\. Atmaksāta summa/g,
       'Отменены все места — билет закрыт. Возвращено'],
     [/Atceltas vietas/g, 'Отменены места'], [/Atmaksāts/g, 'Возвращено'],
@@ -375,6 +385,14 @@ const I18N_PHRASES = {
     [/Neviena filma neatbilst izvēlētajiem filtriem/g, 'No film matches the filters'],
     [/filmas · kārtotas/g, 'films · sorted'],
     [/Biļete atcelta\. Atmaksāta summa/g, 'Ticket cancelled. Refunded'],
+    [/Biļete atcelta\./g, 'Ticket cancelled.'],
+    [/Atmaksāta summa/g, 'Refunded amount'],
+    [/Biļete jau atcelta\. Atmaksāta summa/g, 'Ticket already cancelled. Refunded amount'],
+    [/Biļete jau atcelta\./g, 'Ticket already cancelled.'],
+    [/Ieturēta komisija/g, 'Cancellation fee'],
+    [/Atceļot biļeti, tiek ieturēta komisija/g, 'Cancelling a ticket charges a fee of'],
+    [/no atcelto vietu cenas; atlikusī summa tiek atmaksāta/g,
+      'of the cancelled seats price; the rest is refunded'],
     [/Atceltas vietas/g, 'Cancelled seats'], [/Atmaksāts/g, 'Refunded'],
     [/Derīgās vietas/g, 'Valid seats'],
     [/Par atceltajām vietām atmaksāts/g, 'Refunded for cancelled seats'],
@@ -1068,12 +1086,13 @@ function ticket(){
   <p class="meta">Atzīmē vietas, kuras atcelt. Atmaksa tiks aprēķināta tikai par atzīmētajām; pārējās biļetes paliek derīgas.</p>
   <div class="form-grid">${o.seats.map(n=>`<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" class="cancel-seat" value="${n}" ${(view.cancelSeats||[]).includes(n)?'checked':''}> Vieta ${n} · ${money(o.unit)}</label>`).join('')}</div>
   <div class="form-actions"><button class="button danger" data-action="cancel-seats" data-id="${o.id}">Atcelt atzīmētās vietas</button></div></div>`:''}
+  ${cancellable?`<p class="meta">Atceļot biļeti, tiek ieturēta komisija ${Math.round(CANCEL_FEE*100)} % no atcelto vietu cenas; atlikusī summa tiek atmaksāta.</p>`:''}
   <div class="form-actions">${cancellable?`<button class="button danger" data-action="cancel-order" data-id="${o.id}">Atcelt biļeti</button>`:''}
   <button class="button secondary" data-action="print">Drukāt biļeti</button>
   <button class="button secondary" data-action="send-link" data-id="${o.id}">Sūtīt saiti uz e-pastu (simulēts)</button>
   <button class="button" data-nav="catalog">Atpakaļ uz katalogu</button><button class="button secondary" data-nav="profile">Mani pasūtījumi</button></div>
   ${view.emailOpen?emailBlock(o):''}
-  ${o.cancelled?notice(`Biļete atcelta. Atmaksāta summa: ${money(o.refunded)}.`,o.refunded?'success':'error'):''}
+  ${o.cancelled?notice(`Biļete atcelta. Ieturēta komisija ${money(o.commission||0)}. Atmaksāta summa: ${money(o.refunded)}.`,o.refunded?'success':'error'):''}
   ${!o.cancelled&&o.refunded?notice(`Par atceltajām vietām atmaksāts: ${money(o.refunded)}.`,(o.refunded>o.total?'error':'success')):''}
   ${view.notice?notice(view.notice):''}</section>`
 }
@@ -1316,8 +1335,13 @@ document.addEventListener('click',e=>{
     const s=screening(o.screeningId);
     o.cancelled=true;
     /* Mīna Nr.4 paliek apzināti: parastajā atcelšanā atmaksa tiek rēķināta no seansa cenas,
-       nevis no samaksātās summas. Ja seansu jau atcēla kinoteātris, atgriežam apmaksāto summu. */
-    const add=s?Math.round(s.price*o.seats.length*100)/100:o.total;
+       nevis no samaksātās summas. Ja seansu jau atcēla kinoteātris, atgriežam apmaksāto summu.
+       0.7.3 (US-KN26-87): pircēja atcelšanā tiek ieturēta komisija CANCEL_FEE; kinoteātra atceltā
+       seansā komisijas nav — tā paliek pircēja tiesība uz pilnu atmaksu. */
+    const base=s?Math.round(s.price*o.seats.length*100)/100:o.total;
+    const fee=o.screenCancelled?0:Math.round(base*CANCEL_FEE*100)/100;
+    const add=Math.round((base-fee)*100)/100;
+    o.commission=Math.round(((o.commission||0)+fee)*100)/100;
     o.refunded=Math.round(((o.refunded||0)+add)*100)/100;
     state.reserved[o.screeningId]=reserved(o.screeningId).filter(n=>!o.seats.includes(n));
     save();view.order=o;return render();
@@ -1328,7 +1352,10 @@ document.addEventListener('click',e=>{
     const s=screening(o.screeningId);
     const picked=(view.cancelSeats||[]).filter(n=>o.seats.includes(n));
     if(!picked.length){view.notice='Atzīmējiet vismaz vienu vietu, ko atcelt.';return render()}
-    const refund=s?Math.round(s.price*picked.length*100)/100:0;   // tā pati formula kā pilnajā atcelšanā
+    const base=s?Math.round(s.price*picked.length*100)/100:0;   // tā pati formula kā pilnajā atcelšanā
+    const fee=o.screenCancelled?0:Math.round(base*CANCEL_FEE*100)/100;
+    const refund=Math.round((base-fee)*100)/100;
+    o.commission=Math.round(((o.commission||0)+fee)*100)/100;
     o.refunded=Math.round(((o.refunded||0)+refund)*100)/100;
     o.seats=o.seats.filter(n=>!picked.includes(n));
     o.cancelled=o.seats.length===0;
@@ -1337,8 +1364,8 @@ document.addEventListener('click',e=>{
     view.cancelSeats=[];
     save();view.order=o;
     view.notice=o.cancelled
-      ?`Atceltas visas vietas — biļete slēgta. Atmaksāta summa: ${money(o.refunded)}.`
-      :`Atceltas vietas: ${picked.join(', ')}. Atmaksāts: ${money(refund)}. Derīgās vietas: ${o.seats.join(', ')}.`;
+      ?`Atceltas visas vietas — biļete slēgta. Ieturēta komisija ${money(fee)}. Atmaksāta summa: ${money(o.refunded)}.`
+      :`Atceltas vietas: ${picked.join(', ')}. Ieturēta komisija ${money(fee)}. Atmaksāts: ${money(refund)}. Derīgās vietas: ${o.seats.join(', ')}.`;
     return render();
   }
   /* US-15.08: pircēja izvēle pēc kinoteātra atceltā seansa. */
