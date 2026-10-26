@@ -1,5 +1,5 @@
 const KEY = 'kino-nox-lite-v1';
-const VERSION = '0.7.6';
+const VERSION = '0.7.7';
 const VAT = 0.21;
 const MAX_SEATS = 8;
 /* 0.7.3 (US-KN26-87): komisija par biļetes atcelšanu — 30 % no atcelto vietu cenas. */
@@ -326,6 +326,11 @@ const I18N_PHRASES = {
     [/Ieturēta komisija/g, 'Удержана комиссия'],
     [/Pārdotas biļetes/g, 'Продано билетов'],
     [/Drukāt \/ saglabāt PDF/g, 'Печать / сохранить PDF'],
+    [/Eksportēt datus \(fails\)/g, 'Экспортировать данные (файл)'],
+    [/Importēt datus no faila/g, 'Импортировать данные из файла'],
+    [/Dati importēti\. Tagad pieslēdzies ar savu e-pastu un paroli\./g,
+      'Данные импортированы. Теперь войди своим e-mail и паролем.'],
+    [/Fails nav derīgs[^\n]*/g, 'Файл не подходит — нужен .json, экспортированный из этого приложения.'],
     [/pārdotas biļetes/g, 'продано билетов'],
     [/Atceļot biļeti, tiek ieturēta komisija/g, 'При отмене билета удерживается комиссия'],
     [/no atcelto vietu cenas; atlikusī summa tiek atmaksāta/g,
@@ -395,6 +400,11 @@ const I18N_PHRASES = {
     [/Ieturēta komisija/g, 'Cancellation fee'],
     [/Pārdotas biļetes/g, 'Tickets sold'],
     [/Drukāt \/ saglabāt PDF/g, 'Print / save as PDF'],
+    [/Eksportēt datus \(fails\)/g, 'Export data (file)'],
+    [/Importēt datus no faila/g, 'Import data from file'],
+    [/Dati importēti\. Tagad pieslēdzies ar savu e-pastu un paroli\./g,
+      'Data imported. Now sign in with your e-mail and password.'],
+    [/Fails nav derīgs[^\n]*/g, 'The file is not valid — use a .json exported from this app.'],
     [/pārdotas biļetes/g, 'tickets sold'],
     [/Atceļot biļeti, tiek ieturēta komisija/g, 'Cancelling a ticket charges a fee of'],
     [/no atcelto vietu cenas; atlikusī summa tiek atmaksāta/g,
@@ -1202,7 +1212,7 @@ function profile(){
   <div class="admin-list">${[['E-pasts',logged.email],['Personas kods',logged.code],['Tālrunis',logged.phone],['Dzīvesvieta',logged.address],['Dzimšanas datums',logged.birth]].filter(r=>r[1]).map(([k,v])=>`<div class="admin-row"><span class="meta">${k}</span><strong>${v}</strong></div>`).join('')}</div>
   <p class="meta">Konts un pasūtījumi glabājas tikai šajā pārlūkā.</p>
   <p class="meta">Sesija beigsies pēc <span class="timer" id="session-left">${state.session?holdLabel(sessionLeft()):'—'}</span> — pirkuma laikā laiks tiek atlikts (US-13.02).</p>
-  <button class="button secondary" data-action="logout">Iziet</button>`:`
+  <div class="form-actions"><button class="button secondary" data-action="logout">Iziet</button><button class="button secondary" data-action="export">Eksportēt datus (fails)</button></div>`:`
   <h2>Izveidot kontu</h2>
   <div class="form-grid"><label>Vārds<input id="profile-name" placeholder="Anna"></label>
   <label>Uzvārds<input id="profile-surname" placeholder="Bērziņa"></label>
@@ -1218,6 +1228,7 @@ function profile(){
   <div class="form-grid"><label>E-pasts<input id="login-email" type="email" placeholder="vards@example.com" list="known-users"></label>
   <label>Mācību parole<input id="login-password" type="password" placeholder="Tava parole"></label></div>
   <div class="form-actions"><button class="button secondary" data-action="login">Pieslēgties</button></div>
+  <div class="form-actions"><button class="subtle" data-action="import">Importēt datus no faila</button><input id="import-file" type="file" accept="application/json,.json" hidden></div>
   <button class="subtle" data-action="forgot">Aizmirsu paroli</button>
   ${view.passwordView?notice(`Jauna pagaidu parole: <strong>${view.passwordView}</strong>. Mācību vidē tā tiek parādīta uzreiz.`,'success'):''}`}</aside></section>`
 }
@@ -1488,6 +1499,15 @@ document.addEventListener('click',e=>{
     u.fails=0;state.profile={email:u.email,name:u.name||'',surname:u.surname||'',code:u.code||'',phone:u.phone||'',address:u.address||'',birth:u.birth||''};startSession();save();view.notice=null;view.passwordView=null;return render()
   }
   if(b.dataset.action==='logout'){state.profile=null;state.session=null;save();return nav('profile')}
+  /* 0.7.7: datu eksports — konti un pasūtījumi ceļo failā, nevis prasa serveri vai Python. */
+  if(b.dataset.action==='export'){
+    const blob=new Blob([JSON.stringify(state,null,1)],{type:'application/json'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+    a.download='kinonox-lite-'+VERSION+'-'+todayISO()+'.json';
+    document.body.appendChild(a);a.click();a.remove();
+    setTimeout(function(){URL.revokeObjectURL(a.href)},2000);return;
+  }
+  if(b.dataset.action==='import'){const f=document.querySelector('#import-file');if(f)f.click();return}
   if(b.dataset.action==='op-login'){
     const pass=document.querySelector('#op-pass').value;
     if(pass!==OPERATOR_PASSWORD){view.notice='Nepareiza operatora parole.';return render()}
@@ -1603,6 +1623,25 @@ document.addEventListener('input',e=>{
 });
 document.addEventListener('change',e=>{
   if(e.target.id==='lang'){setLang(e.target.value);return}
+  /* 0.7.7: datu imports — pārnest kontu un pasūtījumus uz citu pārlūku BEZ servera. */
+  if(e.target.id==='import-file'){
+    const f=e.target.files&&e.target.files[0];
+    if(!f) return;
+    const rd=new FileReader();
+    rd.onload=function(){
+      try{
+        const d=JSON.parse(String(rd.result));
+        if(!d||typeof d!=='object') throw new Error('nav objekts');
+        state=Object.assign(clone(seed),d);
+        migrateUsers(state.users);migratePromos(state.promos);
+        /* «Kas pieslēdzies» ir konkrētā pārlūka lieta (tāpat kā servera režīmā): pēc importa pieslēdzas pats. */
+        state.profile=null;state.session=null;
+        save();view.notice='Dati importēti. Tagad pieslēdzies ar savu e-pastu un paroli.';render();
+      }catch(err){view.notice='Fails nav derīgs — vajadzīgs .json, kas eksportēts no šīs lietotnes.';render()}
+    };
+    rd.readAsText(f);
+    return;
+  }
   if(['sc-movie','sc-date','sc-time','sc-hall','sc-price'].includes(e.target.id)){
     const key=e.target.id.slice(3), map={movie:'movieId',date:'date',time:'time',hall:'hall',price:'price'};
     view.scr=Object.assign({},view.scr||{},{[map[key]]:e.target.value});
