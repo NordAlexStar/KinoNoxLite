@@ -2,7 +2,7 @@
 
 Statiskā PB7 mācību lietotne. Atveriet `index.html` pārlūkā: nav vajadzīgs .NET, datubāze, internets vai serveris. Vietējā mapē `assets/` atrodas kino zāles un filmu plakātu attēli.
 
-**Versija 0.7.3**
+**Versija 0.7.5**
 
 ## Kas ir lokāls
 
@@ -22,7 +22,8 @@ Statiskā PB7 mācību lietotne. Atveriet `index.html` pārlūkā: nav vajadzīg
 - **sesija beidzas pēc 30 minūtēm** (US-13.02): atlikums redzams profilā; kamēr notiek pirkums — vietu izvēle, grozs vai maksājums — laiks tiek atlikts un lietotāju neizraksta;
 - biļetes atcelšana (ne vēlāk kā 24 h pirms seansa) un naudas atmaksa;
 - **0.7.3 — komisija par atcelšanu 30 %** (US-KN26-87): pircēja atcelšanā tiek ieturēta komisija 30 % no atcelto vietu cenas, atlikusī summa tiek atmaksāta; komisija redzama biļetē un paziņojumā, atsevišķi par daļēju atcelšanu. Ja seansu atcēla kinoteātris, komisijas nav — paliek pilna atmaksa;
-- **biļetes atcelšana ar saiti no (simulētā) e-pasta**: biļetē ir poga, kas parāda saiti ar biļetes tokenu; saites atvēršana dod atcelšanas ekrānu;
+- **biļetes atcelšana ar saiti no (simulētā) e-pasta**: biļetē ir poga, kas parāda saiti ar biļetes tokenu;
+- **0.7.5 — saite no e-pasta rāda PAŠU biļeti** (US-KN26-76): filma, seanss, vietas, cena, QR kods un poga «Drukāt / saglabāt PDF»; atcelšana un komisijas paskaidrojums paliek tajā pašā lapā;
 - ja seansu atceļ kinoteātris, pircējam ir **izvēle**: pieprasīt atmaksu vai saņemt citu biļeti tajā pašā filmā;
 - operatora panelis ar pieslēgšanos: filmu pievienošana, labošana, dzēšana, seansu izveide, **labošana** un atcelšana, atlaižu kodu pārvaldība (ar termiņu), audita žurnāls;
 - **kopīgs vietu stāvoklis starp pārlūka cilnēm** (servera emulācija mācību videi): pirms pirkuma apstiprināšanas aizņemtās vietas tiek pārlasītas no glabātavas, un citu cilņu izmaiņas ienāk uzreiz — divu pircēju scenāriju var izpildīt divās cilnēs;

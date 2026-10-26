@@ -1,5 +1,5 @@
 const KEY = 'kino-nox-lite-v1';
-const VERSION = '0.7.4';
+const VERSION = '0.7.5';
 const VAT = 0.21;
 const MAX_SEATS = 8;
 /* 0.7.3 (US-KN26-87): komisija par biļetes atcelšanu — 30 % no atcelto vietu cenas. */
@@ -325,6 +325,7 @@ const I18N_PHRASES = {
     [/Biļete jau atcelta\./g, 'Билет уже отменён.'],
     [/Ieturēta komisija/g, 'Удержана комиссия'],
     [/Pārdotas biļetes/g, 'Продано билетов'],
+    [/Drukāt \/ saglabāt PDF/g, 'Печать / сохранить PDF'],
     [/pārdotas biļetes/g, 'продано билетов'],
     [/Atceļot biļeti, tiek ieturēta komisija/g, 'При отмене билета удерживается комиссия'],
     [/no atcelto vietu cenas; atlikusī summa tiek atmaksāta/g,
@@ -393,6 +394,7 @@ const I18N_PHRASES = {
     [/Biļete jau atcelta\./g, 'Ticket already cancelled.'],
     [/Ieturēta komisija/g, 'Cancellation fee'],
     [/Pārdotas biļetes/g, 'Tickets sold'],
+    [/Drukāt \/ saglabāt PDF/g, 'Print / save as PDF'],
     [/pārdotas biļetes/g, 'tickets sold'],
     [/Atceļot biļeti, tiek ieturēta komisija/g, 'Cancelling a ticket charges a fee of'],
     [/no atcelto vietu cenas; atlikusī summa tiek atmaksāta/g,
@@ -1074,17 +1076,23 @@ function emailBlock(o){
   <p><a href="#atcelt=${o.token}">${cancelLink(o)}</a></p>
   <div class="form-actions"><button class="button secondary" data-action="close-email">Aizvērt</button></div></div>`;
 }
-function ticket(){
-  const o=view.order,m=movie(o.movieId),s=screening(o.screeningId),t=typeOf(o.typeId);
+/* 0.7.5 (US-KN26-76): biļetes bloks dzīvo VIENĀ vietā — to pašu rāda gan biļetes ekrāns,
+   gan saite no (simulētā) e-pasta. */
+function ticketCard(o){
+  const m=movie(o.movieId),s=screening(o.screeningId),t=typeOf(o.typeId);
   const bits=Array.from({length:64},(_,i)=>((o.token.charCodeAt(i%o.token.length)+i)%3?'':'off'));
   const when=s?`${dateLabel(s.date)} · ${s.time} · ${s.hall}`:'Seanss atcelts kinoteātrī';
+  return `<div class="ticket"${o.cancelled?' style="opacity:.55"':''}><p class="eyebrow">KINO NOX · ${o.id}</p><h2>${m.title}</h2>
+  <div class="ticket-grid"><div><p><strong>${when}</strong></p><p>Vietas: <strong>${o.seats.join(', ')}</strong> · ${t.label}</p><p>Cena: <strong>${money(o.total)}</strong> (t. sk. PVN ${money(o.vat)})</p><p>Apmaksa: <strong>${o.payment?'apstiprināta':'—'}</strong>${o.payment?` · atsauce <strong>${o.payment.ref}</strong> · ${o.payment.at} · karte ${o.payment.card}`:''}</p><p class="meta">${o.email} · iegādāta ${o.created}${o.replacedFrom?` · pārcelta no ${o.replacedFrom}`:''}</p></div>
+  <div class="qr">${bits.map(c=>`<b class="${c}"></b>`).join('')}</div></div></div>`;
+}
+function ticket(){
+  const o=view.order,s=screening(o.screeningId);
   const left=s?startsAt(s)-Date.now():0;
   const cancellable=!!s&&!o.cancelled&&left>=24*60*60*1000;
   const options=replacementOptions(o);
   return `<section>${steps('ticket')}<p class="eyebrow">${o.cancelled?'Pirkums atcelts':(o.screenCancelled?'Seanss atcelts kinoteātrī':'Pirkums apstiprināts')}</p><h1 class="page-title">Digitālā biļete</h1>
-  <div class="ticket"${o.cancelled?' style="opacity:.55"':''}><p class="eyebrow">KINO NOX · ${o.id}</p><h2>${m.title}</h2>
-  <div class="ticket-grid"><div><p><strong>${when}</strong></p><p>Vietas: <strong>${o.seats.join(', ')}</strong> · ${t.label}</p><p>Cena: <strong>${money(o.total)}</strong> (t. sk. PVN ${money(o.vat)})</p><p>Apmaksa: <strong>${o.payment?'apstiprināta':'—'}</strong>${o.payment?` · atsauce <strong>${o.payment.ref}</strong> · ${o.payment.at} · karte ${o.payment.card}`:''}</p><p class="meta">${o.email} · iegādāta ${o.created}${o.replacedFrom?` · pārcelta no ${o.replacedFrom}`:''}</p></div>
-  <div class="qr">${bits.map(c=>`<b class="${c}"></b>`).join('')}</div></div></div>
+  ${ticketCard(o)}
   ${o.screenCancelled&&!o.cancelled?`<div class="panel"><h2>Seanss atcelts — izvēlies risinājumu</h2>
   <p class="meta">Kinoteātris atcēla seansu. Tev ir izvēle: pilna atmaksa vai cita biļete tajā pašā filmā.</p>
   <div class="form-actions"><button class="button" data-action="choose-refund" data-id="${o.id}">Pieprasīt atmaksu ${money(o.total)}</button></div>
@@ -1097,7 +1105,7 @@ function ticket(){
   <div class="form-actions"><button class="button danger" data-action="cancel-seats" data-id="${o.id}">Atcelt atzīmētās vietas</button></div></div>`:''}
   ${cancellable?`<p class="meta">Atceļot biļeti, tiek ieturēta komisija ${Math.round(CANCEL_FEE*100)} % no atcelto vietu cenas; atlikusī summa tiek atmaksāta.</p>`:''}
   <div class="form-actions">${cancellable?`<button class="button danger" data-action="cancel-order" data-id="${o.id}">Atcelt biļeti</button>`:''}
-  <button class="button secondary" data-action="print">Drukāt biļeti</button>
+  <button class="button secondary" data-action="print">Drukāt / saglabāt PDF</button>
   <button class="button secondary" data-action="send-link" data-id="${o.id}">Sūtīt saiti uz e-pastu (simulēts)</button>
   <button class="button" data-nav="catalog">Atpakaļ uz katalogu</button><button class="button secondary" data-nav="profile">Mani pasūtījumi</button></div>
   ${view.emailOpen?emailBlock(o):''}
@@ -1125,15 +1133,18 @@ function linkScreen(){
   if(!o) return `<section><p class="eyebrow">Saite no e-pasta</p><h1 class="page-title">Saite nav derīga.</h1>
   <p class="lede">Biļete ar šādu saiti šajā pārlūkā nav atrasta. Ja biļeti pircējat citā pārlūkā, saite tur arī jāatver.</p>
   <div class="form-actions"><button class="button" data-nav="catalog">Skatīt filmas</button></div></section>`;
-  const m=movie(o.movieId),s=screening(o.screeningId);
+  /* 0.7.5 (US-KN26-76): saite no e-pasta atver PAŠU biļeti (ar druku/PDF), nevis tikai atcelšanas
+     ekrānu; atcelšanas iespēja un komisijas paskaidrojums paliek tajā pašā lapā. */
+  const s=screening(o.screeningId);
   const left=s?startsAt(s)-Date.now():0;
   const cancellable=!!s&&!o.cancelled&&left>=24*60*60*1000;
-  return `<section><p class="eyebrow">Saite no e-pasta</p><h1 class="page-title">${m.title}</h1>
-  <p class="lede">${o.id} · ${s?`${dateLabel(s.date)} · ${s.time} · ${s.hall}`:'seanss atcelts'} · vietas ${o.seats.join(', ')} · ${money(o.total)}</p>
-  ${o.cancelled?notice(`Biļete jau atcelta. Atmaksāta summa: ${money(o.refunded)}.`,'success')
-    :cancellable?`<div class="form-actions"><button class="button danger" data-action="cancel-order" data-id="${o.id}">Atcelt biļeti</button></div>`
+  return `<section><p class="eyebrow">Saite no e-pasta</p><h1 class="page-title">Digitālā biļete</h1>
+  ${ticketCard(o)}
+  ${o.cancelled?notice(`Biļete jau atcelta. Ieturēta komisija ${money(o.commission||0)}. Atmaksāta summa: ${money(o.refunded)}.`,'success')
+    :cancellable?`<p class="meta">Atceļot biļeti, tiek ieturēta komisija ${Math.round(CANCEL_FEE*100)} % no atcelto vietu cenas; atlikusī summa tiek atmaksāta.</p>
+    <div class="form-actions"><button class="button danger" data-action="cancel-order" data-id="${o.id}">Atcelt biļeti</button></div>`
     :notice('Atcelt nevar: līdz seansam ir mazāk nekā 24 stundas.','error')}
-  <div class="form-actions"><button class="button secondary" data-nav="catalog">Uz katalogu</button></div></section>`;
+  <div class="form-actions"><button class="button secondary" data-action="print">Drukāt / saglabāt PDF</button><button class="button secondary" data-nav="catalog">Uz katalogu</button></div></section>`;
 }
 
 /* ---------- Profils ---------- */
