@@ -1,6 +1,9 @@
-1|# Lokālie demonstrācijas ekrānuzņēmumi
-2|screenshots/
+# Lokālie demonstrācijas ekrānuzņēmumi
+screenshots/
 
 # Servera režīma stāvoklis (mācību dati, nav jāpublicē)
 server/data.json
 server/data.json.tmp
+
+# Linux-build paliek izstrādei; skolēniem paredzēts kino-server.exe
+server/kino-server-linux

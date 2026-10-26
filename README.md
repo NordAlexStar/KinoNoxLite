@@ -2,7 +2,7 @@
 
 Statiskā PB7 mācību lietotne. Atveriet `index.html` pārlūkā: nav vajadzīgs .NET, datubāze, internets vai serveris. Vietējā mapē `assets/` atrodas kino zāles un filmu plakātu attēli.
 
-**Versija 0.7.7**
+**Versija 0.7.8**
 
 ## Kas ir lokāls
 
@@ -26,10 +26,10 @@ Statiskā PB7 mācību lietotne. Atveriet `index.html` pārlūkā: nav vajadzīg
 - **0.7.7 — datu pārnese starp pārlūkiem BEZ servera**: profilā «Eksportēt datus (fails)» saglabā `.json`,
   citā pārlūkā «Importēt datus no faila» to ielādē — konti, paroles un pasūtījumi pārceļas, tad pieslēdzas
   ar savu e-pastu. Nekāds Python un serveris nav vajadzīgs;
-- **0.7.6 — servera režīms (neobligāts, vajag Python 3)**: palaists `python3 server/kino-server.py`, lapa atveras caur
-  `http://127.0.0.1:8765` — konti, paroles, pasūtījumi un vietas glabājas vienā JSON failā, tāpēc
-  pieslēgšanās un biļete strādā no JEBKURA pārlūka tajā pašā datorā (īsta «servera imitācija»);
-  kas pieslēdzies un kāda valoda — paliek katram pārlūkam atsevišķi. `file://` režīms nemainās.
+- **0.7.8 — servera režīms vienā failā**: `server/kino-server.exe` (Windows, bez instalācijas) —
+  dubliklikšķis, un pārlūks atveras pats; konti, paroles, pasūtījumi un vietas kļūst kopīgi visiem
+  pārlūkiem tajā pašā datorā, tāpēc pieslēgšanās un biļete strādā no JEBKURA pārlūka (īsta «servera
+  imitācija»); kas pieslēdzies un kāda valoda — paliek katram pārlūkam atsevišķi. `file://` režīms nemainās.
 - 0.7.6: saite no e-pasta atveras arī tad, ja lapa jau atvērta (hashchange) — agrāk klikšķis neko nedarīja;
 - **0.7.5 — saite no e-pasta rāda PAŠU biļeti** (US-KN26-76): filma, seanss, vietas, cena, QR kods un poga «Drukāt / saglabāt PDF»; atcelšana un komisijas paskaidrojums paliek tajā pašā lapā;
 - ja seansu atceļ kinoteātris, pircējam ir **izvēle**: pieprasīt atmaksu vai saņemt citu biļeti tajā pašā filmā;
@@ -84,3 +84,14 @@ Lietotne ir paredzēta prasību analīzei, backlog darbam, pieņemšanas kritēr
 - **0.3.0** — maksājuma forma ar kartes laukiem un ievades pārbaudi (US-08.04); maksājums tiek apstrādāts uzreiz — stāvoklis, iznākums un maksājuma atsauce biļetē (US-08.01); parole glabājas sāls+jaucējvērtībā, vecie dati tiek pārrakstīti (US-13.01).
 - **0.2.1** — redzama versija un kājene, mobilā navigācija, treilera logs, pirkuma soļu josla, biļetes druka, tukšie stāvokļi, viena faila lejupielāde.
 - **0.2.0** — seansu datumi, filtrs «Šodien», biļešu veidi, 10 minūšu rezervācija, atcelšana ar atmaksu, operatora panelis ar audita žurnālu.
+
+## Servera režīms (viena fails, bez instalācijas)
+
+Windows: dubliklikšķis uz `server/kino-server.exe` — pārlūks atveras pats (`http://127.0.0.1:8765/`).
+Ja Windows jautā atļauju (SmartScreen, neparakstīta programma) — *More info → Run anyway*.
+
+- Stāvoklis: `server/data.json` (izveidojas pats, gitā neiet). Dzēšot to, vide atgriežas sākumā.
+- Cits dators tajā pašā tīklā: `kino-server.exe --host 0.0.0.0` un atver `http://<šī datora IP>:8765/`.
+- Ports aizņemts: `kino-server.exe --port 8766`.
+- Avots: `server/kino-server.go` (Go, tikai standarta bibliotēka). Pārbūve: `go build -o kino-server.exe .` mapē `server/`.
+- Nav autentifikācijas un nav domāts izvietošanai internetā.
