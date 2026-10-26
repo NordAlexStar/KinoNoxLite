@@ -1,5 +1,5 @@
 const KEY = 'kino-nox-lite-v1';
-const VERSION = '0.7.9';
+const VERSION = '0.7.10';
 const VAT = 0.21;
 const MAX_SEATS = 8;
 /* 0.7.3 (US-KN26-87): komisija par biļetes atcelšanu — 30 % no atcelto vietu cenas. */
@@ -328,6 +328,12 @@ const I18N_PHRASES = {
     [/Drukāt \/ saglabāt PDF/g, 'Печать / сохранить PDF'],
     [/Eksportēt datus \(fails\)/g, 'Экспортировать данные (файл)'],
     [/Ātri: tikai e-pasts un parole/g, 'Быстро: только e-mail и пароль'],
+    [/Pieslēgties ar Google \(simulēts\)/g, 'Войти через Google (симуляция)'],
+    [/Pieslēgties ar/g, 'Войти через'], [/Tālruņa numuru/g, 'Телефон'], [/Personas kodu/g, 'Персональный код'],
+    [/Pasūtījumi/g, 'Заказы'], [/Mainīt vietu/g, 'Изменить место'],
+    [/Lietotājs ar šādu identifikatoru nav atrasts\./g, 'Пользователь с таким идентификатором не найден.'],
+    [/Vieta nomainīta/g, 'Место изменено'], [/Pircējs par to netiek informēts\./g, 'Покупатель об этом не уведомляется.'],
+    [/Lietotāja vieta nomainīta/g, 'Место изменено'],
     [/Importēt datus no faila/g, 'Импортировать данные из файла'],
     [/Dati importēti\. Tagad pieslēdzies ar savu e-pastu un paroli\./g,
       'Данные импортированы. Теперь войди своим e-mail и паролем.'],
@@ -403,6 +409,12 @@ const I18N_PHRASES = {
     [/Drukāt \/ saglabāt PDF/g, 'Print / save as PDF'],
     [/Eksportēt datus \(fails\)/g, 'Export data (file)'],
     [/Ātri: tikai e-pasts un parole/g, 'Quick: e-mail and password only'],
+    [/Pieslēgties ar Google \(simulēts\)/g, 'Sign in with Google (simulated)'],
+    [/Pieslēgties ar/g, 'Sign in with'], [/Tālruņa numuru/g, 'Phone'], [/Personas kodu/g, 'Personal code'],
+    [/Pasūtījumi/g, 'Orders'], [/Mainīt vietu/g, 'Change seat'],
+    [/Lietotājs ar šādu identifikatoru nav atrasts\./g, 'No user found with this identifier.'],
+    [/Vieta nomainīta/g, 'Seat changed'], [/Pircējs par to netiek informēts\./g, 'The buyer is not notified.'],
+    [/Lietotāja vieta nomainīta/g, 'Seat changed'],
     [/Importēt datus no faila/g, 'Import data from file'],
     [/Dati importēti\. Tagad pieslēdzies ar savu e-pastu un paroli\./g,
       'Data imported. Now sign in with your e-mail and password.'],
@@ -1227,15 +1239,39 @@ function profile(){
   <p class="meta">Parolei jābūt vismaz 8 rakstzīmes, ar lielo un mazo burtu, ciparu un speciālo rakstzīmi.</p>
   <div class="form-actions"><button class="button" data-action="register">Izveidot kontu</button><button class="button secondary" data-action="register-fast">Ātri: tikai e-pasts un parole</button></div>
   <h2>Pieslēgšanās</h2>
-  <div class="form-grid"><label>E-pasts<input id="login-email" type="email" placeholder="vards@example.com" list="known-users"></label>
+  <div class="form-grid"><label>Pieslēgties ar<select id="login-method">
+    <option value="email">E-pastu</option><option value="phone">Tālruņa numuru</option>
+    <option value="code">Personas kodu</option></select></label>
+  <label><span id="login-id-label">E-pasts</span><input id="login-email" type="text" placeholder="vards@example.com" list="known-users"></label>
   <label>Mācību parole<input id="login-password" type="password" placeholder="Tava parole"></label></div>
   <div class="form-actions"><button class="button secondary" data-action="login">Pieslēgties</button></div>
+  <div class="form-actions"><button class="subtle" data-action="google-login">Pieslēgties ar Google (simulēts)</button></div>
   <div class="form-actions"><button class="subtle" data-action="import">Importēt datus no faila</button><input id="import-file" type="file" accept="application/json,.json" hidden></div>
   <button class="subtle" data-action="forgot">Aizmirsu paroli</button>
   ${view.passwordView?notice(`Jauna pagaidu parole: <strong>${view.passwordView}</strong>. Mācību vidē tā tiek parādīta uzreiz.`,'success'):''}`}</aside></section>`
 }
 
 /* ---------- Operatora panelis ---------- */
+/* 0.7.10 (US-KN26-27): operatora saraksts ar pasūtījumiem un vietas maiņa bez pircēja ziņas. */
+function hallSeats(s){
+  const h=state.halls[s.hall];const rows='ABCDEFG'.slice(0,h.rows).split('');const out=[];
+  for(const r of rows){for(let i=1;i<=h.seats;i++)out.push(r+i)}
+  return out;
+}
+function adminOrders(){
+  if(!state.orders.length) return '<p class="meta">Pasūtījumu vēl nav.</p>';
+  return state.orders.slice().reverse().map(o=>{
+    const s=screening(o.screeningId),m=movie(o.movieId);
+    const taken=s?reserved(s.id):[];
+    const pickers=o.seats.map((n,i)=>{
+      const opts=(s?hallSeats(s):[n]).filter(x=>x===n||!taken.includes(x))
+        .map(x=>`<option value="${x}"${x===n?' selected':''}>${x}</option>`).join('');
+      return `<span class="meta">${n} → <select data-seat-to="${o.id}:${i}">${opts}</select></span>`;
+    }).join(' ');
+    return `<div class="admin-row"><span><strong>${o.id}</strong> · ${m?m.title:'—'}<br><span class="meta">${s?`${dateLabel(s.date)} · ${s.time} · ${s.hall}`:'seanss atcelts'} · ${o.email} · ${money(o.total)}${o.cancelled?' · <strong>Atcelta</strong>':''}</span></span>
+      <span>${o.cancelled?'':pickers+' <button class="button secondary" data-action="change-seat" data-id="'+o.id+'">Mainīt vietu</button>'}</span></div>`;
+  }).join('');
+}
 function admin(){
   if(!state.operator) return `<section><p class="eyebrow">Operatora panelis</p><h1 class="page-title">Operatora pieslēgšanās</h1>
   <div class="panel" style="max-width:420px"><div class="form-grid"><label>Operatora parole<input id="op-pass" type="password" placeholder="Parole"></label></div>
@@ -1256,6 +1292,7 @@ function admin(){
   <p class="eyebrow">Operatora panelis</p><h1 class="page-title">Mācību dati</h1><p class="lede">Izmaiņas uzreiz saglabājas šajā pārlūkā. Izmantojiet atiestatīšanu, lai atgrieztu sākuma variantu.</p>
   <div class="panel"><h2>Filmas (${state.movies.length})</h2><div class="admin-list">${movies}</div></div>
   <div class="panel"><h2>Aktīvie seansi (${state.screenings.length}) · pārdotas biļetes: ${state.screenings.reduce((n,s)=>n+soldCount(s.id),0)}</h2><div class="admin-list">${screenings}</div></div>
+  <div class="panel"><h2>Pasūtījumi (${state.orders.length})</h2><div class="admin-list">${adminOrders()}</div></div>
   <div class="panel"><h2>Atlaižu kodi</h2><div class="admin-list">${Object.entries(state.promos).map(([k])=>{const p=promoOf(k)||{kind:'percent',value:0,min:0,until:''};const val=p.kind==='eur'?`−${money(p.value)}`:`−${p.value}%`;return `<div class="admin-row"><span><strong>${k}</strong> · ${val}${p.min?` · no ${money(p.min)}`:''} · ${p.until?(promoExpired(k)?`termiņš ${p.until} (beidzies)`:`termiņš ${p.until}`):'bez termiņa'}</span></div>`}).join('')}</div>
   <div class="form-grid"><label>Jauns kods<input id="promo-code" placeholder="PIEMĒRAM, VASARA"></label><label>Veids<select id="promo-kind"><option value="percent">Procenti</option><option value="eur">Fiksēta summa €</option></select></label><label>Atlaide<input id="promo-value" type="number" min="1" max="50" value="15"></label><label>Minimālā summa €<input id="promo-min" type="number" min="0" step="0.5" value="0"></label><label>Termiņš, ja vajag<input id="promo-until" type="date"></label></div>
   <div class="form-actions"><button class="button secondary" data-action="add-promo">Pievienot kodu</button></div>
@@ -1478,10 +1515,14 @@ document.addEventListener('click',e=>{
     const reg=b.dataset.action==='register'||b.dataset.action==='register-fast';
     const needFields=b.dataset.action==='register';
     const fld=id=>{const el=document.querySelector(id);return el?el.value.trim():''};
+    /* 0.7.10 (US-KN26-19): pieslēgties var ar e-pastu, tālruņa numuru vai personas kodu. */
+    const method=reg?'email':((document.querySelector('#login-method')||{}).value||'email');
     const email=fld(reg?'#profile-email':'#login-email');
     const passEl=document.querySelector(reg?'#profile-password':'#login-password');
     const pass=passEl?passEl.value:'';
-    if(!/^\S+@\S+\.\S+$/.test(email)){view.notice='Ievadiet derīgu e-pasta adresi.';return render()}
+    if(method==='email'&&!/^\S+@\S+\.\S+$/.test(email)){view.notice='Ievadiet derīgu e-pasta adresi.';return render()}
+    if(method==='phone'&&email.replace(/\D/g,'').length<8){view.notice='Tālruņa numuram jābūt vismaz 8 cipariem.';return render()}
+    if(method==='code'&&!/^\d{6}-?\d{5}$/.test(email.replace(/\s+/g,''))){view.notice='Personas kodam jābūt 11 cipariem (ar defisi vai bez tās).';return render()}
     if(pass.length<8||!/[A-ZĀČĒĢĪĶĻŅŠŪŽ]/.test(pass)||!/[a-zāčēģīķļņšūž]/.test(pass)||!/\d/.test(pass)||!/[^\w\s]/.test(pass)){view.notice='Parolei jābūt vismaz 8 rakstzīmes ar lielo un mazo burtu, ciparu un speciālo rakstzīmi.';return render()}
     let person=null;
     if(needFields){
@@ -1493,7 +1534,11 @@ document.addEventListener('click',e=>{
       if(person.phone.replace(/\D/g,'').length<8){view.notice='Tālruņa numuram jābūt vismaz 8 cipariem.';return render()}
       if(person.birth>todayISO()){view.notice='Dzimšanas datums nevar būt nākotnē.';return render()}
     }
-    let u=state.users.find(x=>x.email.toLowerCase()===email.toLowerCase());
+    let u=null;
+    if(method==='email') u=state.users.find(x=>x.email.toLowerCase()===email.toLowerCase());
+    else if(method==='phone'){const d=email.replace(/\D/g,'');u=state.users.find(x=>String(x.phone||'').replace(/\D/g,'')===d)}
+    else {const c=email.replace(/\s+/g,'');u=state.users.find(x=>String(x.code||'').replace(/\s+/g,'')===c)}
+    if(!reg&&!u){view.notice='Lietotājs ar šādu identifikatoru nav atrasts.';return render()}
     if(reg&&u){view.notice='Konts ar šo e-pastu jau ir izveidots — pieslēdzieties.';return render()}
     if(reg){u={email,salt:randHex(16),algo:'sha256',fails:0,blocked:false};u.hash=hashPassword(pass,u.salt);Object.assign(u,person);state.users.push(u)}
     if(!u||u.hash!==hashPassword(pass,u.salt)){
@@ -1502,6 +1547,14 @@ document.addEventListener('click',e=>{
     }
     if(u.blocked){view.notice='Konts ir bloķēts. Izmantojiet paroles atiestatīšanu.';return render()}
     u.fails=0;state.profile={email:u.email,name:u.name||'',surname:u.surname||'',code:u.code||'',phone:u.phone||'',address:u.address||'',birth:u.birth||''};startSession();save();view.notice=null;view.passwordView=null;return render()
+  }
+  /* 0.7.10 (US-KN26-08): sociālā tīkla pieteikšanās ir simulēta — mācību vidē īsta OAuth nav. */
+  if(b.dataset.action==='google-login'){
+    const mail='google.demo@example.com';
+    let gu=state.users.find(x=>x.email===mail);
+    if(!gu){gu={email:mail,salt:randHex(16),algo:'sha256',fails:0,blocked:false,name:'Google',surname:'Demo',code:'',phone:'',address:'',birth:''};gu.hash=hashPassword('Google123!',gu.salt);state.users.push(gu)}
+    state.profile={email:gu.email,name:gu.name||'',surname:gu.surname||'',code:gu.code||'',phone:gu.phone||'',address:gu.address||'',birth:gu.birth||''};
+    startSession();save();view.notice='Pieslēgts ar Google (simulēts).';return render();
   }
   if(b.dataset.action==='logout'){state.profile=null;state.session=null;save();return nav('profile')}
   /* 0.7.7: datu eksports — konti un pasūtījumi ceļo failā, nevis prasa serveri vai Python. */
@@ -1513,6 +1566,25 @@ document.addEventListener('click',e=>{
     setTimeout(function(){URL.revokeObjectURL(a.href)},2000);return;
   }
   if(b.dataset.action==='import'){const f=document.querySelector('#import-file');if(f)f.click();return}
+  /* 0.7.10 (US-KN26-27): operātors nomaina pārdotas biļetes vietu; pircējam paziņojums netiek sūtīts. */
+  if(b.dataset.action==='change-seat'){
+    const o=state.orders.find(x=>x.id===b.dataset.id);
+    if(!o) return;
+    const s=screening(o.screeningId);
+    if(!s){toast('Seanss atcelts — vietu mainīt nevar.');return}
+    const taken=reserved(s.id);
+    const next=[...o.seats];
+    document.querySelectorAll('[data-seat-to^="'+o.id+':"]').forEach(sel=>{
+      const idx=Number(sel.dataset.seatTo.split(':')[1]);
+      if(sel.value&&sel.value!==next[idx]) next[idx]=sel.value;
+    });
+    if(next.some(n=>taken.includes(n)&&!o.seats.includes(n))){toast('Kāda no izvēlētajām vietām jau ir aizņemta.');return}
+    const freed=o.seats.filter(n=>!next.includes(n));
+    o.seats=next;
+    state.reserved[s.id]=[...taken.filter(n=>!freed.includes(n)),...next.filter(n=>!taken.includes(n))];
+    audit('Vietas maiņa', `${o.id}: ${freed.length?freed.join(',')+' → '+next.join(','):'bez izmaiņām'}`);
+    save();view.notice=`Vieta nomainīta: ${next.join(', ')}. Pircējs par to netiek informēts.`;return render();
+  }
   if(b.dataset.action==='op-login'){
     const pass=document.querySelector('#op-pass').value;
     if(pass!==OPERATOR_PASSWORD){view.notice='Nepareiza operatora parole.';return render()}
