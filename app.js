@@ -1,5 +1,5 @@
 const KEY = 'kino-nox-lite-v1';
-const VERSION = '0.7.3';
+const VERSION = '0.7.4';
 const VAT = 0.21;
 const MAX_SEATS = 8;
 /* 0.7.3 (US-KN26-87): komisija par biļetes atcelšanu — 30 % no atcelto vietu cenas. */
@@ -324,6 +324,8 @@ const I18N_PHRASES = {
     [/Biļete jau atcelta\. Atmaksāta summa/g, 'Билет уже отменён. Сумма возврата'],
     [/Biļete jau atcelta\./g, 'Билет уже отменён.'],
     [/Ieturēta komisija/g, 'Удержана комиссия'],
+    [/Pārdotas biļetes/g, 'Продано билетов'],
+    [/pārdotas biļetes/g, 'продано билетов'],
     [/Atceļot biļeti, tiek ieturēta komisija/g, 'При отмене билета удерживается комиссия'],
     [/no atcelto vietu cenas; atlikusī summa tiek atmaksāta/g,
       'от цены отменённых мест; остаток возвращается'],
@@ -390,6 +392,8 @@ const I18N_PHRASES = {
     [/Biļete jau atcelta\. Atmaksāta summa/g, 'Ticket already cancelled. Refunded amount'],
     [/Biļete jau atcelta\./g, 'Ticket already cancelled.'],
     [/Ieturēta komisija/g, 'Cancellation fee'],
+    [/Pārdotas biļetes/g, 'Tickets sold'],
+    [/pārdotas biļetes/g, 'tickets sold'],
     [/Atceļot biļeti, tiek ieturēta komisija/g, 'Cancelling a ticket charges a fee of'],
     [/no atcelto vietu cenas; atlikusī summa tiek atmaksāta/g,
       'of the cancelled seats price; the rest is refunded'],
@@ -755,6 +759,11 @@ function dateLabel(iso){
 function movie(id){return state.movies.find(x=>x.id===Number(id))}
 function screening(id){return state.screenings.find(x=>x.id===Number(id))}
 function reserved(id){return state.reserved[id]||[]}
+/* 0.7.4 (US-KN26-26): pārdoto biļešu skaits uz seansu — skaita aktīvos pasūtījumus, atceltās vietas
+   jau ir izņemtas no o.seats, tāpēc atsevišķi tās nav jāatskaita. */
+function soldCount(screeningId){
+  return state.orders.reduce((n,o)=>(o.screeningId===screeningId&&!o.cancelled)?n+o.seats.length:n,0);
+}
 function typeOf(id){return state.ticketTypes.find(t=>t.id===id)||state.ticketTypes[0]}
 /* US-16.06: rīta seansi (sākas pirms 12:00) ir par 20 % lētāki; robeža 12:00 vēl nav rīts. */
 const MORNING_UNTIL = '12:00', MORNING_DISCOUNT = 0.2;
@@ -1165,7 +1174,7 @@ function admin(){
   <div class="panel" style="max-width:420px"><div class="form-grid"><label>Operatora parole<input id="op-pass" type="password" placeholder="Parole"></label></div>
   <div class="form-actions"><button class="button" data-action="op-login">Pieslēgties</button></div>${view.notice?notice(view.notice):''}</div></section>`;
   const movies=state.movies.map(m=>`<div class="admin-row"><span><strong>${m.title}</strong><br><span class="meta">${m.genre} · ${m.duration} min · ${money(m.price)}</span></span><button class="button secondary" data-action="edit-movie" data-id="${m.id}">Labot</button> <button class="button danger" data-action="delete-movie" data-id="${m.id}">Dzēst</button></div>`).join('');
-  const screenings=state.screenings.map(s=>`<div class="admin-row"><span><strong>${movie(s.movieId).title}</strong><br><span class="meta">${dateLabel(s.date)} · ${s.time} · ${s.hall} · ${money(s.price)}</span></span><button class="button secondary" data-action="edit-screening" data-id="${s.id}">Labot</button> <button class="button secondary" data-action="new-screening" data-id="${s.movieId}">Pievienot seansu</button> <button class="button danger" data-action="cancel-screening" data-id="${s.id}">Atcelt</button></div>`).join('');
+  const screenings=state.screenings.map(s=>`<div class="admin-row"><span><strong>${movie(s.movieId).title}</strong><br><span class="meta">${dateLabel(s.date)} · ${s.time} · ${s.hall} · ${money(s.price)}<br>Pārdotas biļetes: <strong>${soldCount(s.id)}</strong></span></span><button class="button secondary" data-action="edit-screening" data-id="${s.id}">Labot</button> <button class="button secondary" data-action="new-screening" data-id="${s.movieId}">Pievienot seansu</button> <button class="button danger" data-action="cancel-screening" data-id="${s.id}">Atcelt</button></div>`).join('');
   const editing=view.editingMovie;
   const edSc=view.editingScreening?screening(view.editingScreening):null;
   const preMovie=String(view.screeningMovie||(edSc?edSc.movieId:''));
@@ -1179,7 +1188,7 @@ function admin(){
   return `<section class="admin-layout"><div>
   <p class="eyebrow">Operatora panelis</p><h1 class="page-title">Mācību dati</h1><p class="lede">Izmaiņas uzreiz saglabājas šajā pārlūkā. Izmantojiet atiestatīšanu, lai atgrieztu sākuma variantu.</p>
   <div class="panel"><h2>Filmas (${state.movies.length})</h2><div class="admin-list">${movies}</div></div>
-  <div class="panel"><h2>Aktīvie seansi (${state.screenings.length})</h2><div class="admin-list">${screenings}</div></div>
+  <div class="panel"><h2>Aktīvie seansi (${state.screenings.length}) · pārdotas biļetes: ${state.screenings.reduce((n,s)=>n+soldCount(s.id),0)}</h2><div class="admin-list">${screenings}</div></div>
   <div class="panel"><h2>Atlaižu kodi</h2><div class="admin-list">${Object.entries(state.promos).map(([k])=>{const p=promoOf(k)||{kind:'percent',value:0,min:0,until:''};const val=p.kind==='eur'?`−${money(p.value)}`:`−${p.value}%`;return `<div class="admin-row"><span><strong>${k}</strong> · ${val}${p.min?` · no ${money(p.min)}`:''} · ${p.until?(promoExpired(k)?`termiņš ${p.until} (beidzies)`:`termiņš ${p.until}`):'bez termiņa'}</span></div>`}).join('')}</div>
   <div class="form-grid"><label>Jauns kods<input id="promo-code" placeholder="PIEMĒRAM, VASARA"></label><label>Veids<select id="promo-kind"><option value="percent">Procenti</option><option value="eur">Fiksēta summa €</option></select></label><label>Atlaide<input id="promo-value" type="number" min="1" max="50" value="15"></label><label>Minimālā summa €<input id="promo-min" type="number" min="0" step="0.5" value="0"></label><label>Termiņš, ja vajag<input id="promo-until" type="date"></label></div>
   <div class="form-actions"><button class="button secondary" data-action="add-promo">Pievienot kodu</button></div>
