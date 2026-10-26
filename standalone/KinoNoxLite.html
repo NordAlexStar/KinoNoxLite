@@ -106,7 +106,7 @@
   <div id="toast" role="status" aria-live="polite"></div>
   <script>
 const KEY = 'kino-nox-lite-v1';
-const VERSION = '0.7.1';
+const VERSION = '0.7.2';
 const VAT = 0.21;
 const MAX_SEATS = 8;
 const OPERATOR_PASSWORD = 'op2026';
@@ -327,6 +327,41 @@ const I18N_FULL = {
     'Filma ir pievienota lokālajiem datiem.': 'The film has been added to local data.'
   }
 };
+
+/* 0.7.2 (US-KN26-14): reģistrācijas personu datu lauki. Tulkojumi turēti atsevišķi, lai papildināšana
+   nepieskartos lielajam sarakstam; tr() lasa I18N_FULL, tāpēc karte tiek pielikta tam klāt. */
+const I18N_EXTRA = {
+  ru: {
+    'Vārds': 'Имя', 'Uzvārds': 'Фамилия', 'Personas kods': 'Персональный код',
+    'Tālrunis': 'Телефон', 'Dzīvesvieta': 'Место жительства',
+    'Dzimšanas datums': 'Дата рождения', 'Izveidot kontu': 'Создать аккаунт',
+    'Pieslēgšanās': 'Вход', 'Pieslēgties': 'Войти', 'Tava parole': 'Твой пароль',
+    'Anna': 'Анна', 'Bērziņa': 'Берзиня',
+    'Aizpildiet visus reģistrācijas laukus: vārds, uzvārds, personas kods, tālrunis, dzīvesvieta, dzimšanas datums.':
+      'Заполните все поля регистрации: имя, фамилия, персональный код, телефон, место жительства, дата рождения.',
+    'Personas kodam jābūt 11 cipariem (ar defisi vai bez tās).':
+      'Персональный код — 11 цифр (с дефисом или без).',
+    'Tālruņa numuram jābūt vismaz 8 cipariem.': 'Телефонный номер — не менее 8 цифр.',
+    'Dzimšanas datums nevar būt nākotnē.': 'Дата рождения не может быть в будущем.',
+    'Konts ar šo e-pastu jau ir izveidots — pieslēdzieties.': 'Аккаунт с этим e-mail уже создан — войдите.'
+  },
+  en: {
+    'Vārds': 'First name', 'Uzvārds': 'Surname', 'Personas kods': 'Personal code',
+    'Tālrunis': 'Phone', 'Dzīvesvieta': 'Address', 'Dzimšanas datums': 'Date of birth',
+    'Izveidot kontu': 'Create account', 'Pieslēgšanās': 'Sign in', 'Pieslēgties': 'Sign in',
+    'Tava parole': 'Your password', 'Anna': 'Anna', 'Bērziņa': 'Bērziņa',
+    'Aizpildiet visus reģistrācijas laukus: vārds, uzvārds, personas kods, tālrunis, dzīvesvieta, dzimšanas datums.':
+      'Fill in all registration fields: first name, surname, personal code, phone, address, date of birth.',
+    'Personas kodam jābūt 11 cipariem (ar defisi vai bez tās).':
+      'The personal code must be 11 digits (with or without a hyphen).',
+    'Tālruņa numuram jābūt vismaz 8 cipariem.': 'The phone number must contain at least 8 digits.',
+    'Dzimšanas datums nevar būt nākotnē.': 'The date of birth cannot be in the future.',
+    'Konts ar šo e-pastu jau ir izveidots — pieslēdzieties.': 'An account with this e-mail already exists — sign in.'
+  }
+};
+Object.entries(I18N_EXTRA).forEach(([lang, map]) => {
+  I18N_FULL[lang] = Object.assign(I18N_FULL[lang] || {}, map);
+});
 
 /* Leksika: vārdi, kas parādās saliktos teikumos (datumi, cenas, saraksti, žanri). */
 const I18N_LEX = {
@@ -1188,14 +1223,26 @@ function profile(){
   return `<section class="profile-layout"><div><p class="eyebrow">Profils</p><h1 class="page-title">${logged?logged.email:'Pieslēdzieties vai izveidojiet kontu.'}</h1>
   ${logged?`<div class="panel"><h2>Mani pasūtījumi</h2>${mine.length?mine.map(o=>{const sc=screening(o.screeningId);return `<div class="admin-row"><span><strong>${movie(o.movieId).title}</strong>${o.cancelled?' <span class="tag">Atcelta</span>':(o.screenCancelled?' <span class="tag">Seanss atcelts — gaida izvēli</span>':'')}<br><span class="meta">${sc?`${dateLabel(sc.date)} · ${sc.time}`:'seanss atcelts'} · ${o.created} · ${o.seats.join(', ')}</span></span><button class="button secondary" data-order="${o.id}">Biļete</button></div>`}).join(''):'<p class="meta">Pasūtījumu vēl nav.</p>'}</div>`:`<p class="lede">Šis konts ir lokāls šajā pārlūkā. Neievadiet īstu paroli.</p>`}
   ${view.notice?notice(view.notice):''}</div>
-  <aside class="panel">${logged?`<h2>Pieslēgts</h2><p class="meta">Konts un pasūtījumi glabājas tikai šajā pārlūkā.</p>
+  <aside class="panel">${logged?`<h2>Pieslēgts</h2><p class="meta">${[logged.name,logged.surname].filter(Boolean).join(' ')||logged.email}</p>
+  <div class="admin-list">${[['E-pasts',logged.email],['Personas kods',logged.code],['Tālrunis',logged.phone],['Dzīvesvieta',logged.address],['Dzimšanas datums',logged.birth]].filter(r=>r[1]).map(([k,v])=>`<div class="admin-row"><span class="meta">${k}</span><strong>${v}</strong></div>`).join('')}</div>
+  <p class="meta">Konts un pasūtījumi glabājas tikai šajā pārlūkā.</p>
   <p class="meta">Sesija beigsies pēc <span class="timer" id="session-left">${state.session?holdLabel(sessionLeft()):'—'}</span> — pirkuma laikā laiks tiek atlikts (US-13.02).</p>
   <button class="button secondary" data-action="logout">Iziet</button>`:`
-  <h2>Izveidot vai atvērt profilu</h2>
-  <div class="form-grid"><label>E-pasts<input id="profile-email" type="email" placeholder="vards@example.com" list="known-users"><datalist id="known-users">${users}</datalist></label>
+  <h2>Izveidot kontu</h2>
+  <div class="form-grid"><label>Vārds<input id="profile-name" placeholder="Anna"></label>
+  <label>Uzvārds<input id="profile-surname" placeholder="Bērziņa"></label>
+  <label>Personas kods<input id="profile-code" inputmode="numeric" placeholder="010203-12345"></label>
+  <label>E-pasts<input id="profile-email" type="email" placeholder="vards@example.com" list="known-users"><datalist id="known-users">${users}</datalist></label>
+  <label>Tālrunis<input id="profile-phone" type="tel" placeholder="+371 20000000"></label>
+  <label>Dzīvesvieta<input id="profile-address" placeholder="Daugavpils, Vienības iela 1"></label>
+  <label>Dzimšanas datums<input id="profile-birth" type="date"></label>
   <label>Mācību parole<input id="profile-password" type="password" placeholder="Vismaz 8 rakstzīmes"></label></div>
   <p class="meta">Parolei jābūt vismaz 8 rakstzīmes, ar lielo un mazo burtu, ciparu un speciālo rakstzīmi.</p>
-  <div class="form-actions"><button class="button" data-action="register">Izveidot kontu</button><button class="button secondary" data-action="login">Pieslēgties</button></div>
+  <div class="form-actions"><button class="button" data-action="register">Izveidot kontu</button></div>
+  <h2>Pieslēgšanās</h2>
+  <div class="form-grid"><label>E-pasts<input id="login-email" type="email" placeholder="vards@example.com" list="known-users"></label>
+  <label>Mācību parole<input id="login-password" type="password" placeholder="Tava parole"></label></div>
+  <div class="form-actions"><button class="button secondary" data-action="login">Pieslēgties</button></div>
   <button class="subtle" data-action="forgot">Aizmirsu paroli</button>
   ${view.passwordView?notice(`Jauna pagaidu parole: <strong>${view.passwordView}</strong>. Mācību vidē tā tiek parādīta uzreiz.`,'success'):''}`}</aside></section>`
 }
@@ -1429,17 +1476,33 @@ document.addEventListener('click',e=>{
   if(b.dataset.order){const o=state.orders.find(x=>x.id===b.dataset.order);view={...view,screen:'ticket',order:o,notice:null};return render()}
   if(b.dataset.action==='forgot'){view.passwordView='TEMP-'+Math.random().toString(36).slice(2,6).toUpperCase();return render()}
   if(b.dataset.action==='register'||b.dataset.action==='login'){
-    const email=document.querySelector('#profile-email').value.trim(),pass=document.querySelector('#profile-password').value;
+    /* 0.7.2 (US-KN26-14): reģistrācijā tiek norādīti personas dati; pieslēgšanās paliek e-pasts + parole. */
+    const reg=b.dataset.action==='register';
+    const fld=id=>{const el=document.querySelector(id);return el?el.value.trim():''};
+    const email=fld(reg?'#profile-email':'#login-email');
+    const passEl=document.querySelector(reg?'#profile-password':'#login-password');
+    const pass=passEl?passEl.value:'';
     if(!/^\S+@\S+\.\S+$/.test(email)){view.notice='Ievadiet derīgu e-pasta adresi.';return render()}
     if(pass.length<8||!/[A-ZĀČĒĢĪĶĻŅŠŪŽ]/.test(pass)||!/[a-zāčēģīķļņšūž]/.test(pass)||!/\d/.test(pass)||!/[^\w\s]/.test(pass)){view.notice='Parolei jābūt vismaz 8 rakstzīmes ar lielo un mazo burtu, ciparu un speciālo rakstzīmi.';return render()}
+    let person=null;
+    if(reg){
+      person={name:fld('#profile-name'),surname:fld('#profile-surname'),code:fld('#profile-code').replace(/\s+/g,''),
+              phone:fld('#profile-phone'),address:fld('#profile-address'),birth:fld('#profile-birth')};
+      if(!person.name||!person.surname||!person.code||!person.phone||!person.address||!person.birth){
+        view.notice='Aizpildiet visus reģistrācijas laukus: vārds, uzvārds, personas kods, tālrunis, dzīvesvieta, dzimšanas datums.';return render()}
+      if(!/^\d{6}-?\d{5}$/.test(person.code)){view.notice='Personas kodam jābūt 11 cipariem (ar defisi vai bez tās).';return render()}
+      if(person.phone.replace(/\D/g,'').length<8){view.notice='Tālruņa numuram jābūt vismaz 8 cipariem.';return render()}
+      if(person.birth>todayISO()){view.notice='Dzimšanas datums nevar būt nākotnē.';return render()}
+    }
     let u=state.users.find(x=>x.email.toLowerCase()===email.toLowerCase());
-    if(b.dataset.action==='register'&&!u){u={email,salt:randHex(16),algo:'sha256',fails:0,blocked:false};u.hash=hashPassword(pass,u.salt);state.users.push(u)}
+    if(reg&&u){view.notice='Konts ar šo e-pastu jau ir izveidots — pieslēdzieties.';return render()}
+    if(reg){u={email,salt:randHex(16),algo:'sha256',fails:0,blocked:false};u.hash=hashPassword(pass,u.salt);Object.assign(u,person);state.users.push(u)}
     if(!u||u.hash!==hashPassword(pass,u.salt)){
       if(u){u.fails=(u.fails||0)+1;if(u.fails>3){u.blocked=true;save();view.notice='Konts bloķēts pēc vairākiem neveiksmīgiem mēģinājumiem. Izmantojiet paroles atiestatīšanu.';return render()}}
       view.notice='E-pasts vai mācību parole nav pareiza.';save();return render()
     }
     if(u.blocked){view.notice='Konts ir bloķēts. Izmantojiet paroles atiestatīšanu.';return render()}
-    u.fails=0;state.profile={email:u.email};startSession();save();view.notice=null;view.passwordView=null;return render()
+    u.fails=0;state.profile={email:u.email,name:u.name||'',surname:u.surname||'',code:u.code||'',phone:u.phone||'',address:u.address||'',birth:u.birth||''};startSession();save();view.notice=null;view.passwordView=null;return render()
   }
   if(b.dataset.action==='logout'){state.profile=null;state.session=null;save();return nav('profile')}
   if(b.dataset.action==='op-login'){

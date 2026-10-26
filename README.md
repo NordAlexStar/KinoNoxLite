@@ -2,7 +2,7 @@
 
 Statiskā PB7 mācību lietotne. Atveriet `index.html` pārlūkā: nav vajadzīgs .NET, datubāze, internets vai serveris. Vietējā mapē `assets/` atrodas kino zāles un filmu plakātu attēli.
 
-**Versija 0.7.1**
+**Versija 0.7.2**
 
 ## Kas ir lokāls
 
@@ -17,6 +17,7 @@ Statiskā PB7 mācību lietotne. Atveriet `index.html` pārlūkā: nav vajadzīg
 - maksājums tiek apstrādāts uzreiz: pēc apstiprināšanas redzams stāvoklis «Maksājums tiek apstrādāts…», un iznākums (apstiprināts, maksājuma atsauce, laiks, maskēti kartes pēdējie 4 cipari) parādās biļetē vienā solī;
 - CVC kods netiek saglabāts ne `localStorage`, ne pasūtījumā — glabājas tikai maskēti `•••• 1234` un maksājuma atsauce;
 - profils ar reģistrāciju, paroles prasībām, bloķēšanu un pagaidu paroli;
+- **0.7.2 — reģistrācija ar personas datiem** (US-KN26-14): vārds, uzvārds, personas kods (11 cipari), tālrunis, dzīvesvieta, dzimšanas datums un parole; pieslēgšanās paliek e-pasts + parole; profils rāda ievadītos datus, parole joprojām jaucējvērtībā;
 - parole glabājas **jaucējvērtībā** (lietotāja sāls + 1000 reižu SHA-256), nevis atklātā tekstā; vecāki dati tiek pārrakstīti automātiski pirmajā atvēršanā;
 - **sesija beidzas pēc 30 minūtēm** (US-13.02): atlikums redzams profilā; kamēr notiek pirkums — vietu izvēle, grozs vai maksājums — laiks tiek atlikts un lietotāju neizraksta;
 - biļetes atcelšana (ne vēlāk kā 24 h pirms seansa) un naudas atmaksa;
