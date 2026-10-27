@@ -1,5 +1,5 @@
 const KEY = 'kino-nox-lite-v1';
-const VERSION = '0.7.12';
+const VERSION = '0.7.13';
 const VAT = 0.21;
 const MAX_SEATS = 8;
 /* 0.7.3 (US-KN26-87): komisija par biļetes atcelšanu — 30 % no atcelto vietu cenas. */
@@ -65,6 +65,7 @@ const I18N_FULL = {
     'Biļetes e-pasts tiek ievadīts maksājuma blokā (laukā «E-pasts biļetei»).':
       'E-mail билета вводится в блоке оплаты (поле «E-mail для билета»).',
     'Maksājuma dati': 'Данные оплаты', 'E-pasts biļetei': 'E-mail для билета', 'E-pasts': 'E-mail',
+    'Tālruņa numurs': 'Номер телефона', 'Personas kods': 'Персональный код',
     'Kartes numurs': 'Номер карты', 'Vārds uz kartes': 'Имя на карте',
     'Derīguma termiņš (MM/GG)': 'Срок действия (ММ/ГГ)', 'CVC': 'CVC',
     'Mācību vide: maksājumu pakalpojums tiek simulēts. Ievadiet tikai testa kartes datus (piemēram, 4242 4242 4242 4242); īstus kartes datus šeit ievadīt nedrīkst.':
@@ -164,6 +165,7 @@ const I18N_FULL = {
     'Biļetes e-pasts tiek ievadīts maksājuma blokā (laukā «E-pasts biļetei»).':
       'The ticket e-mail is entered in the payment block (field “E-mail for the ticket”).',
     'Maksājuma dati': 'Payment details', 'E-pasts biļetei': 'E-mail for the ticket', 'E-pasts': 'E-mail',
+    'Tālruņa numurs': 'Phone number', 'Personas kods': 'Personal code',
     'Kartes numurs': 'Card number', 'Vārds uz kartes': 'Name on card',
     'Derīguma termiņš (MM/GG)': 'Expiry (MM/YY)', 'CVC': 'CVC',
     'Mācību vide: maksājumu pakalpojums tiek simulēts. Ievadiet tikai testa kartes datus (piemēram, 4242 4242 4242 4242); īstus kartes datus šeit ievadīt nedrīkst.':
@@ -1705,8 +1707,21 @@ document.addEventListener('input',e=>{
   const el=document.querySelector('#search');
   if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length)}
 });
+/* KN26-BUG-02: lauka nosaukums atbilst izvēlētajam pieslēgšanās veidam (e-pasts / tālrunis / personas kods). */
+function loginIdHint(method){
+  const label=document.querySelector('#login-id-label'),input=document.querySelector('#login-email');
+  if(!label||!input) return;
+  const map={email:['E-pasts','vards@example.com','email'],
+             phone:['Tālruņa numurs','+371 20000000','tel'],
+             code:['Personas kods','050590-12345','numeric']};
+  const [text,ph,mode]=map[method]||map.email;
+  label.textContent=tr(text);input.placeholder=ph;input.setAttribute('inputmode',mode);
+}
 document.addEventListener('change',e=>{
   if(e.target.id==='lang'){setLang(e.target.value);return}
+  /* KN26-BUG-02 (US-KN26-19): izvēloties pieslēgšanās veidu, mainās arī lauka nosaukums. Agrāk
+     visos trīs gadījumos palika «E-pasts», lai gan lauks pieņem tālruni un personas kodu. */
+  if(e.target.id==='login-method'){loginIdHint(e.target.value);return}
   /* 0.7.7: datu imports — pārnest kontu un pasūtījumus uz citu pārlūku BEZ servera. */
   if(e.target.id==='import-file'){
     const f=e.target.files&&e.target.files[0];

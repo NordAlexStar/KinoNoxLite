@@ -2,7 +2,7 @@
 
 Statiskā PB7 mācību lietotne. Atveriet `index.html` pārlūkā: nav vajadzīgs .NET, datubāze, internets vai serveris. Vietējā mapē `assets/` atrodas kino zāles un filmu plakātu attēli.
 
-**Versija 0.7.12**
+**Versija 0.7.13**
 
 ## Kas ir lokāls
 
@@ -23,6 +23,9 @@ Statiskā PB7 mācību lietotne. Atveriet `index.html` pārlūkā: nav vajadzīg
 - biļetes atcelšana (ne vēlāk kā 24 h pirms seansa) un naudas atmaksa;
 - **0.7.3 — komisija par atcelšanu 30 %** (US-KN26-87): pircēja atcelšanā tiek ieturēta komisija 30 % no atcelto vietu cenas, atlikusī summa tiek atmaksāta; komisija redzama biļetē un paziņojumā, atsevišķi par daļēju atcelšanu. Ja seansu atcēla kinoteātris, komisijas nav — paliek pilna atmaksa;
 - **biļetes atcelšana ar saiti no (simulētā) e-pasta**: biļetē ir poga, kas parāda saiti ar biļetes tokenu;
+- **0.7.13 — pieslēgšanās lauks seko izvēlētajam veidam** (KN26-BUG-02): izvēloties «Tālruņa numuru» vai
+  «Personas kodu», mainās lauka nosaukums, piemērs un tastatūras tips (agrāk visos trijos gadījumos
+  palika «E-pasts», lai gan lauks pieņem arī tālruni un personas kodu);
 - **0.7.12 — biļetes atcelšana paskaidro savu logu** (KN26-BUG-10): ja līdz seansam palicis mazāk par
   24 h, biļetes lapā tagad ir teikts, ka atcelt vairs nevar (biļetes noteikumi), nevis poga vienkārši
   pazūd. Pats 24 h noteikums nav mainīts;
