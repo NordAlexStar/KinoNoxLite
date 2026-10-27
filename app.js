@@ -1,10 +1,12 @@
 const KEY = 'kino-nox-lite-v1';
-const VERSION = '0.7.14';
+const VERSION = '0.7.15';
 const VAT = 0.21;
 const MAX_SEATS = 8;
 /* 0.7.3 (US-KN26-87): komisija par biļetes atcelšanu — 30 % no atcelto vietu cenas. */
 const CANCEL_FEE = 0.3;
 const OPERATOR_PASSWORD = 'op2026';
+/* KN26-BUG-12: блокировка после трёх неверных паролей — ровно на 24 часа (US-KN26-21). */
+const BLOCK_MS = 24*60*60*1000;
 /* Maksājums tiek apstrādāts uzreiz: simulētā pakalpojuma atbilde (US-08.01). */
 const PAY_DELAY = 900;
 /* Sesijas noildze (US-13.02 / US-15.10): sesija beidzas pēc definēta laika, bet
@@ -1581,11 +1583,23 @@ document.addEventListener('click',e=>{
     if(!reg&&!u){view.notice='Lietotājs ar šādu identifikatoru nav atrasts.';return render()}
     if(reg&&u){view.notice='Konts ar šo e-pastu jau ir izveidots — pieslēdzieties.';return render()}
     if(reg){u={email,salt:randHex(16),algo:'sha256',fails:0,blocked:false};u.hash=hashPassword(pass,u.salt);Object.assign(u,person);state.users.push(u)}
+    /* KN26-BUG-12 (US-KN26-21): три неверных пароля — блокировка на 24 часа. Прежнее правило
+       `fails>3` давало четыре попытки и блокировало бессрочно: требование говорит про третью
+       попытку и ровно 24 часа. Старые записи без `blockedUntil` остаются блокированными. */
     if(!u||u.hash!==hashPassword(pass,u.salt)){
-      if(u){u.fails=(u.fails||0)+1;if(u.fails>3){u.blocked=true;save();view.notice='Konts bloķēts pēc vairākiem neveiksmīgiem mēģinājumiem. Izmantojiet paroles atiestatīšanu.';return render()}}
+      if(u){
+        u.fails=(u.fails||0)+1;
+        if(u.fails>=3){
+          u.blocked=true;u.blockedUntil=Date.now()+BLOCK_MS;save();
+          view.notice='Pēc trim neveiksmīgiem mēģinājumiem konts ir bloķēts uz 24 stundām.';return render()
+        }
+      }
       view.notice='E-pasts vai mācību parole nav pareiza.';save();return render()
     }
-    if(u.blocked){view.notice='Konts ir bloķēts. Izmantojiet paroles atiestatīšanu.';return render()}
+    if(u.blocked){
+      if(u.blockedUntil&&Date.now()>u.blockedUntil){u.blocked=false;u.blockedUntil=0;u.fails=0;save()}
+      else{view.notice='Konts ir bloķēts pēc trim neveiksmīgiem mēģinājumiem — mēģiniet vēlāk.';return render()}
+    }
     u.fails=0;state.profile={email:u.email,name:u.name||'',surname:u.surname||'',code:u.code||'',phone:u.phone||'',address:u.address||'',birth:u.birth||''};startSession();save();view.notice=null;view.passwordView=null;return render()
   }
   /* 0.7.10 (US-KN26-08): sociālā tīkla pieteikšanās ir simulēta — mācību vidē īsta OAuth nav. */
