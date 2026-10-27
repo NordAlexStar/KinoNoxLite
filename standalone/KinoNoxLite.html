@@ -106,7 +106,7 @@
   <div id="toast" role="status" aria-live="polite"></div>
   <script>
 const KEY = 'kino-nox-lite-v1';
-const VERSION = '0.7.13';
+const VERSION = '0.7.14';
 const VAT = 0.21;
 const MAX_SEATS = 8;
 /* 0.7.3 (US-KN26-87): komisija par biļetes atcelšanu — 30 % no atcelto vietu cenas. */
@@ -1370,6 +1370,16 @@ function hallSeats(s){
   for(const r of rows){for(let i=1;i<=h.seats;i++)out.push(r+i)}
   return out;
 }
+/* KN26-BUG-08 (US-KN26-85, 3. AC «atcelt biļeti ne vēlāk kā 24 h pirms seansa»): владелец билета —
+   оператор — отменяет его из панели. Раньше в строке заказа были только «Mainīt vietu» и смена
+   места, поэтому AC про отмену для роли владельца не выполнялся вовсе (это и увидела Кристине,
+   только записала причиной «не смогла войти»). Правило то же, что у покупателя: ≥ 24 h до сеанса. */
+function orderCancelButton(o,s){
+  if(!s||o.cancelled) return '';
+  const left=startsAt(s)-Date.now();
+  if(left<24*60*60*1000) return ' <span class="meta">Atcelt vairs nevar: līdz seansam mazāk par 24 h</span>';
+  return ' <button class="button danger" data-action="cancel-order-admin" data-id="'+o.id+'">Atcelt biļeti</button>';
+}
 function adminOrders(){
   if(!state.orders.length) return '<p class="meta">Pasūtījumu vēl nav.</p>';
   return state.orders.slice().reverse().map(o=>{
@@ -1381,7 +1391,7 @@ function adminOrders(){
       return `<span class="meta">${n} → <select data-seat-to="${o.id}:${i}">${opts}</select></span>`;
     }).join(' ');
     return `<div class="admin-row"><span><strong>${o.id}</strong> · ${m?m.title:'—'}<br><span class="meta">${s?`${dateLabel(s.date)} · ${s.time} · ${s.hall}`:'seanss atcelts'} · ${o.email} · ${money(o.total)}${o.cancelled?' · <strong>Atcelta</strong>':''}</span></span>
-      <span>${o.cancelled?'':pickers+' <button class="button secondary" data-action="change-seat" data-id="'+o.id+'">Mainīt vietu</button>'}</span></div>`;
+      <span>${o.cancelled?'':pickers+' <button class="button secondary" data-action="change-seat" data-id="'+o.id+'">Mainīt vietu</button>'+orderCancelButton(o,s)}</span></div>`;
   }).join('');
 }
 function admin(){
@@ -1559,6 +1569,27 @@ document.addEventListener('click',e=>{
     view.cart.promo=raw.trim();view.cart.promoNotice='';return render();
   }
   if(b.dataset.action==='checkout')return checkout();
+  if(b.dataset.action==='cancel-order-admin'){
+    /* KN26-BUG-08: отмена билета владельцем из панели — то же правило и та же формула, что у покупателя. */
+    const o=state.orders.find(x=>x.id===b.dataset.id);
+    if(!o) return render();
+    if(o.cancelled){view.notice='Šī biļete jau ir atcelta.';return render()}
+    const s=screening(o.screeningId);
+    if(!s||startsAt(s)-Date.now()<24*60*60*1000){
+      view.notice='Atcelt biļeti var tikai tad, ja līdz seansam palicis vismaz 24 h.';return render()
+    }
+    const base=Math.round(s.price*o.seats.length*100)/100;
+    const fee=o.screenCancelled?0:Math.round(base*CANCEL_FEE*100)/100;
+    const refund=Math.round((base-fee)*100)/100;
+    o.commission=Math.round(((o.commission||0)+fee)*100)/100;
+    o.refunded=Math.round(((o.refunded||0)+refund)*100)/100;
+    o.cancelled=true;o.cancelledBy='operators';
+    state.reserved[o.screeningId]=reserved(o.screeningId).filter(n=>!o.seats.includes(n));
+    audit('Atcelta biļete',`${o.id} · operatora panelis`);
+    save();
+    view.notice=`Biļete ${o.id} atcelta. Ieturēta komisija ${money(fee)}, atmaksāts ${money(refund)}. Vietas atbrīvotas.`;
+    return render();
+  }
   if(b.dataset.action==='cancel-order'){
     const o=state.orders.find(x=>x.id===b.dataset.id);
     const s=screening(o.screeningId);
